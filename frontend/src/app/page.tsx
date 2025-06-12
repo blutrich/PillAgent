@@ -59,6 +59,18 @@ const ClimbingPillApp = () => {
     todayComplete: false
   });
 
+  // Assessment state
+  const [assessmentStep, setAssessmentStep] = useState(1);
+  const [assessmentData, setAssessmentData] = useState({
+    bodyWeight: '',
+    pullUpsMax: '',
+    hangTime: '',
+    currentGrade: '',
+    targetGrade: '',
+    experience: '',
+    weaknesses: []
+  });
+
   // Load user data from Mastra on component mount
   useEffect(() => {
     const loadUserData = async () => {
@@ -325,27 +337,66 @@ const ClimbingPillApp = () => {
     </div>
   );
 
+  // Assessment functions
+  const nextAssessmentStep = () => {
+    if (assessmentStep < 5) {
+      setAssessmentStep(assessmentStep + 1);
+    } else {
+      // Complete assessment and generate program
+      completeAssessment();
+    }
+  };
+
+  const prevAssessmentStep = () => {
+    if (assessmentStep > 1) {
+      setAssessmentStep(assessmentStep - 1);
+    }
+  };
+
+  const completeAssessment = async () => {
+    try {
+      // Call Mastra API to conduct assessment
+      await climbingPillAPI.conductAssessment(assessmentData);
+      
+      // Update user data with assessment results
+      setUserData(prev => ({
+        ...prev,
+        currentGrade: assessmentData.currentGrade,
+        targetGrade: assessmentData.targetGrade,
+        assessmentScore: 0.85 // Mock score, would come from AI analysis
+      }));
+
+      // Switch to dashboard to show results
+      setActiveView('dashboard');
+      
+      // Show success message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Great job completing your assessment! Based on your results, I've created a personalized ${assessmentData.targetGrade} training program. Your current strength level shows you're ready for targeted finger strength and power development.`,
+        confidence: 0.9
+      }]);
+      setChatOpen(true);
+      
+    } catch (error) {
+      console.error('Error completing assessment:', error);
+    }
+  };
+
+  const updateAssessmentData = (field: string, value: string) => {
+    setAssessmentData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Assessment View with AI Guidance
-  const AssessmentView = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-mastra-2xl font-semibold mb-2 text-white">Physical Assessment</h1>
-        <p className="text-gray-400">Get your personalized training program based on scientific analysis</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Assessment Form */}
-        <div className="lg:col-span-2">
-          <div className="glass rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-mastra-xl font-semibold text-white">Assessment Progress</h2>
-              <span className="text-sm text-gray-400">Step 1 of 5</span>
-            </div>
-            
-            <div className="w-full bg-gray-800 rounded-full h-2 mb-6">
-              <div className="bg-white h-2 rounded-full transition-all duration-300" style={{width: '20%'}}></div>
-            </div>
-
+  const AssessmentView = () => {
+    const progressPercentage = (assessmentStep / 5) * 100;
+    
+    const renderAssessmentStep = () => {
+      switch (assessmentStep) {
+        case 1:
+          return (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
@@ -354,6 +405,8 @@ const ClimbingPillApp = () => {
                 <input 
                   type="number" 
                   placeholder="70"
+                  value={assessmentData.bodyWeight}
+                  onChange={(e) => updateAssessmentData('bodyWeight', e.target.value)}
                   className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
                 />
                 <p className="text-xs text-gray-400 mt-1">💬 Ask AI: &quot;Why do you need my weight?&quot;</p>
@@ -366,46 +419,233 @@ const ClimbingPillApp = () => {
                 <input 
                   type="number" 
                   placeholder="15"
+                  value={assessmentData.pullUpsMax}
+                  onChange={(e) => updateAssessmentData('pullUpsMax', e.target.value)}
                   className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
                 />
                 <p className="text-xs text-gray-400 mt-1">💡 AI Tip: Test when fresh, go to failure</p>
               </div>
-
-              <button className="w-full bg-white text-black py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors">
-                Continue Assessment
-              </button>
             </div>
-          </div>
+          );
+        
+        case 2:
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Dead Hang Time (seconds)
+                </label>
+                <input 
+                  type="number" 
+                  placeholder="45"
+                  value={assessmentData.hangTime}
+                  onChange={(e) => updateAssessmentData('hangTime', e.target.value)}
+                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-400 mt-1">💡 AI Tip: Use a 20mm edge, full crimp grip</p>
+              </div>
+            </div>
+          );
+        
+        case 3:
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Current Climbing Grade
+                </label>
+                <select 
+                  value={assessmentData.currentGrade}
+                  onChange={(e) => updateAssessmentData('currentGrade', e.target.value)}
+                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white"
+                >
+                  <option value="">Select your grade</option>
+                  <option value="V4">V4</option>
+                  <option value="V5">V5</option>
+                  <option value="V6">V6</option>
+                  <option value="V7">V7</option>
+                  <option value="V8">V8</option>
+                  <option value="V9">V9</option>
+                  <option value="V10">V10</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Target Grade
+                </label>
+                <select 
+                  value={assessmentData.targetGrade}
+                  onChange={(e) => updateAssessmentData('targetGrade', e.target.value)}
+                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white"
+                >
+                  <option value="">Select target grade</option>
+                  <option value="V5">V5</option>
+                  <option value="V6">V6</option>
+                  <option value="V7">V7</option>
+                  <option value="V8">V8</option>
+                  <option value="V9">V9</option>
+                  <option value="V10">V10</option>
+                  <option value="V11">V11</option>
+                </select>
+              </div>
+            </div>
+          );
+        
+        case 4:
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Climbing Experience
+                </label>
+                <select 
+                  value={assessmentData.experience}
+                  onChange={(e) => updateAssessmentData('experience', e.target.value)}
+                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white"
+                >
+                  <option value="">Select experience level</option>
+                  <option value="beginner">Beginner (0-1 years)</option>
+                  <option value="intermediate">Intermediate (1-3 years)</option>
+                  <option value="advanced">Advanced (3-5 years)</option>
+                  <option value="expert">Expert (5+ years)</option>
+                </select>
+              </div>
+            </div>
+          );
+        
+        case 5:
+          return (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-white mb-4">Assessment Complete!</h3>
+                <p className="text-gray-300 mb-6">
+                  Ready to generate your personalized training program based on your results.
+                </p>
+                <div className="bg-gray-800 rounded-lg p-4 text-left">
+                  <h4 className="font-medium text-white mb-2">Your Results:</h4>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• Current Grade: {assessmentData.currentGrade}</li>
+                    <li>• Target Grade: {assessmentData.targetGrade}</li>
+                    <li>• Pull-ups: {assessmentData.pullUpsMax}</li>
+                    <li>• Hang Time: {assessmentData.hangTime}s</li>
+                    <li>• Experience: {assessmentData.experience}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          );
+        
+        default:
+          return null;
+      }
+    };
+
+    const getStepTitle = () => {
+      switch (assessmentStep) {
+        case 1: return "Physical Strength";
+        case 2: return "Finger Strength";
+        case 3: return "Climbing Grades";
+        case 4: return "Experience Level";
+        case 5: return "Review & Generate";
+        default: return "Assessment";
+      }
+    };
+
+    const getStepDescription = () => {
+      switch (assessmentStep) {
+        case 1: return "Basic strength measurements";
+        case 2: return "Finger and grip strength";
+        case 3: return "Current and target grades";
+        case 4: return "Your climbing background";
+        case 5: return "Generate your program";
+        default: return "";
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-mastra-2xl font-semibold mb-2 text-white">Physical Assessment</h1>
+          <p className="text-gray-400">Get your personalized training program based on scientific analysis</p>
         </div>
 
-        {/* AI Assessment Assistant */}
-        <div className="lg:col-span-1">
-          <div className="glass-strong rounded-xl p-6">
-            <div className="flex items-center mb-4">
-              <AICoachIcon className="w-6 h-6 text-white mr-2" />
-              <h3 className="font-semibold text-white">AI Assessment Guide</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Assessment Form */}
+          <div className="lg:col-span-2">
+            <div className="glass rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-mastra-xl font-semibold text-white">Assessment Progress</h2>
+                <span className="text-sm text-gray-400">Step {assessmentStep} of 5</span>
+              </div>
+              
+              <div className="w-full bg-gray-800 rounded-full h-2 mb-6">
+                <div 
+                  className="bg-white h-2 rounded-full transition-all duration-300" 
+                  style={{width: `${progressPercentage}%`}}
+                ></div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-2">{getStepTitle()}</h3>
+                <p className="text-gray-400 text-sm">{getStepDescription()}</p>
+              </div>
+
+              {renderAssessmentStep()}
+
+              <div className="flex justify-between mt-6">
+                <button 
+                  onClick={prevAssessmentStep}
+                  disabled={assessmentStep === 1}
+                  className="px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white border border-gray-600 hover:bg-gray-800"
+                >
+                  Previous
+                </button>
+                <button 
+                  onClick={nextAssessmentStep}
+                  className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  {assessmentStep === 5 ? 'Generate Program' : 'Continue Assessment'}
+                </button>
+              </div>
             </div>
-            <div className="space-y-3 text-sm">
-              <div className="surface-tertiary p-3 rounded-lg border border-contrast">
-                <p className="font-medium text-white">Current Test: Pull-ups</p>
-                <p className="text-gray-300">This measures your pulling power - crucial for steep climbing.</p>
+          </div>
+
+          {/* AI Assessment Assistant */}
+          <div className="lg:col-span-1">
+            <div className="glass-strong rounded-xl p-6">
+              <div className="flex items-center mb-4">
+                <AICoachIcon className="w-6 h-6 text-white mr-2" />
+                <h3 className="font-semibold text-white">AI Assessment Guide</h3>
               </div>
-              <div className="surface-tertiary p-3 rounded-lg border border-contrast">
-                <p className="font-medium text-white">Pro Tip:</p>
-                <p className="text-gray-300">Warm up with 5-10 easy pull-ups before testing your max.</p>
+              <div className="space-y-3 text-sm">
+                <div className="surface-tertiary p-3 rounded-lg border border-contrast">
+                  <p className="font-medium text-white">Current Test: {getStepTitle()}</p>
+                  <p className="text-gray-300">{getStepDescription()}</p>
+                </div>
+                <div className="surface-tertiary p-3 rounded-lg border border-contrast">
+                  <p className="font-medium text-white">Pro Tip:</p>
+                  <p className="text-gray-300">
+                    {assessmentStep === 1 && "Test when fresh for accurate results"}
+                    {assessmentStep === 2 && "Use proper form - no swinging or kipping"}
+                    {assessmentStep === 3 && "Be honest about your current abilities"}
+                    {assessmentStep === 4 && "Include all climbing disciplines"}
+                    {assessmentStep === 5 && "Your program will be tailored to your results"}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setChatOpen(true)}
+                  className="w-full bg-white text-black py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                >
+                  💬 Ask about this test
+                </button>
               </div>
-              <button 
-                onClick={() => setChatOpen(true)}
-                className="w-full bg-white text-black py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors"
-              >
-                💬 Ask about this test
-              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Training View
   const TrainingView = () => (
