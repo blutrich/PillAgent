@@ -3,6 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { climbingPillAPI } from '../lib/mastra-client';
 import { 
+  ClimbingPillLogo,
+  ClimbingGradeIcon,
+  StrengthMeterIcon,
+  PowerTrainingIcon,
+  AssessmentIcon,
+  ProgressChartIcon,
+  TrainingPlanIcon,
+  ScheduleIcon,
+  AICoachIcon,
+  ClimbingMountainIcon
+} from '../components/icons';
+import {
   MessageCircle, 
   Menu,
   X,
@@ -16,24 +28,6 @@ import {
   Award,
   RotateCcw
 } from 'lucide-react';
-import {
-  ClimbingGradeIcon,
-  FingerStrengthIcon,
-  PowerTrainingIcon,
-  AssessmentIcon,
-  ProgressChartIcon,
-  TrainingPlanIcon,
-  ScheduleIcon,
-  AICoachIcon,
-  ClimbingMountainIcon,
-  StrengthMeterIcon,
-  WorkoutSessionIcon,
-  FlashTrainingIcon,
-  EnduranceIcon,
-  ProjectClimbIcon,
-  RestDayIcon,
-  ClimbingPillLogo
-} from '../components/icons';
 
 const ClimbingPillApp = () => {
   const [activeView, setActiveView] = useState('dashboard');
@@ -128,8 +122,12 @@ const ClimbingPillApp = () => {
   };
 
   // Helper Components
-  const StatCard = ({ icon: Icon, label, value, sublabel, color, trend }: {
-    icon: any; label: string; value: string; sublabel: string; color: string; trend?: string;
+  const StatCard = ({ icon: Icon, label, value, sublabel, trend }: {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    value: string;
+    sublabel: string;
+    trend?: string;
   }) => (
     <div className="glass rounded-2xl p-6 hover-lift">
       <div className="flex items-center justify-between">
@@ -147,7 +145,11 @@ const ClimbingPillApp = () => {
   );
 
   const ActionButton = ({ icon: Icon, title, subtitle, onClick, aiSuggested = false }: {
-    icon: any; title: string; subtitle: string; onClick: () => void; aiSuggested?: boolean;
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+    subtitle: string;
+    onClick: () => void;
+    aiSuggested?: boolean;
   }) => (
     <button 
       onClick={onClick}
@@ -173,8 +175,11 @@ const ClimbingPillApp = () => {
     </button>
   );
 
-  const ActivityItem = ({ icon: Icon, text, time, color, aiInsight }: {
-    icon: any; text: string; time: string; color: string; aiInsight?: string;
+  const ActivityItem = ({ icon: Icon, text, time, aiInsight }: {
+    icon: React.ComponentType<{ className?: string }>;
+    text: string;
+    time: string;
+    aiInsight?: string;
   }) => (
     <div className="flex items-start space-x-3 p-3 hover:bg-gray-800 rounded-lg transition-colors">
       <Icon className="h-5 w-5 text-white mt-1" />
@@ -226,7 +231,6 @@ const ClimbingPillApp = () => {
           label="Current Grade"
           value={userData.currentGrade}
           sublabel={`Target: ${userData.targetGrade}`}
-          color="text-blue-500"
           trend="+1 grade in 8 weeks"
         />
         <StatCard 
@@ -234,7 +238,6 @@ const ClimbingPillApp = () => {
           label="Assessment Score"
           value={userData.assessmentScore.toFixed(2)}
           sublabel="Strong performance"
-          color="text-emerald-500"
           trend="↗ +12% from last assessment"
         />
         <StatCard 
@@ -242,7 +245,6 @@ const ClimbingPillApp = () => {
           label="Program Progress"
           value={`${userData.programProgress}%`}
           sublabel="Week 3 of 6"
-          color="text-purple-500"
           trend="On track for V8"
         />
       </div>
@@ -308,21 +310,18 @@ const ClimbingPillApp = () => {
             icon={CheckCircle}
             text="Completed fingerboard session"
             time="2 hours ago"
-            color="text-green-500"
             aiInsight="15% stronger than last week!"
           />
           <ActivityItem 
             icon={Award}
             text="Sent first V7 project!"
             time="Yesterday"
-            color="text-blue-500"
             aiInsight="Ready for V8 attempts"
           />
           <ActivityItem 
             icon={AICoachIcon}
             text="AI updated your program"
             time="3 days ago"
-            color="text-purple-500"
             aiInsight="Added core focus based on video analysis"
           />
         </div>

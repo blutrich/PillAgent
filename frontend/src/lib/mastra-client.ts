@@ -3,7 +3,7 @@ const MASTRA_API_BASE = 'http://localhost:4112/api';
 
 export const climbingPillAPI = {
   // Chat with the AI coach
-  async chat(message: string, context?: any) {
+  async chat(message: string) {
     try {
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
@@ -111,7 +111,7 @@ export const climbingPillAPI = {
   },
 
   // Run onboarding flow
-  async startOnboarding(userData: any) {
+  async startOnboarding(userData: Record<string, unknown>) {
     try {
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
@@ -131,7 +131,7 @@ export const climbingPillAPI = {
   },
 
   // Conduct physical assessment
-  async conductAssessment(assessmentData: any) {
+  async conductAssessment(assessmentData: Record<string, unknown>) {
     try {
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
@@ -151,7 +151,7 @@ export const climbingPillAPI = {
   },
 
   // Set climbing goals
-  async setGoals(goalData: any) {
+  async setGoals(goalData: Record<string, unknown>) {
     try {
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
@@ -171,7 +171,7 @@ export const climbingPillAPI = {
   },
 
   // Run retention analysis
-  async analyzeRetention(retentionData: any) {
+  async analyzeRetention(retentionData: Record<string, unknown>) {
     try {
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
