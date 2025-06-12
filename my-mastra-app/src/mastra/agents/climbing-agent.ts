@@ -15,7 +15,7 @@ import {
   onboardingAnalyticsTool 
 } from '../tools/onboarding-tool';
 import { retentionAnalysisTool } from '../tools/retention-tool';
-import { retentionWorkflow } from '../workflows/retention-workflow';
+import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow';
 
 const llm = openai('gpt-4o');
 
@@ -196,6 +196,103 @@ export const climbingAgent = new Agent({
     - Injury protocols for shoulder, elbow, finger, back issues
     - Equipment adaptations for available resources
 
+    CLIMBINGPILL COMPLETE TRAINING METHODOLOGY:
+
+    Training Philosophy:
+    Built on progressive overload and specificity - like building a house with strong foundation (basic techniques/strength) and systematic layers (difficulty/complexity).
+
+    Training Level Determination:
+    1. Find "80% boulder grade": Grade you can complete 8/10 problems in a session
+    2. Calculate training grades from 80% baseline:
+       - Project grade = 80% grade + 1 (V5 → V6 projects)
+       - Flash grade = 80% grade - 1 (V5 → V4 flash attempts)  
+       - Technical/Endurance = 3-4 grades below flash (V5 → V1-V2)
+
+    CORE TRAINING COMPONENTS:
+
+    1. FINGERBOARD TRAINING:
+    Purpose: Systematic finger strength development
+    Protocol:
+    - Use 20mm edge, 10-second hangs
+    - Find working weight: Add/remove until failure at 10s
+    - Progression: Weeks 1-2 (3 sets) → 3-4 (4 sets) → 6+ (5 sets)
+    - Rest 2-3 minutes between sets
+    - Track working weight each session
+    Safety: Stop if finger pain, always warm up gradually
+
+    2. BOULDER PROJECTS:
+    Purpose: Strength and power development
+    Protocol:
+    - Choose problems you can do 3-4 moves on
+    - 20 minutes per boulder, 3 different boulders per session
+    - Focus on quality attempts, not completion
+    - Rest until fully recovered between attempts
+    Example: V6 projects if V5 is 80% grade
+
+    3. BOULDER FLASH TRAINING:
+    Purpose: Reading, planning, executing
+    Protocol:
+    - Study boulder 2-3 minutes, plan sequence
+    - Maximum 2 attempts per boulder
+    - Take video, review between attempts
+    - 7-10 boulders at flash grade per session
+    - 2 minutes rest between problems
+    Total session: ~1 hour
+
+    4. TECHNICAL/ENDURANCE TRAINING:
+    Purpose: Climbing stamina and movement efficiency
+    Progressive Format:
+    - Start: 1min on/1min off × 5 sets
+    - Build to: 1min on/off × 10 sets
+    - Progress: 2min on/off × 5 sets → 10 sets
+    - Advance: 3min on/off × 3 sets
+    - Then: 4min on/off × 3 sets  
+    - Finally: 5min on/off × 2 sets
+    Keep intensity low (RPE 3-4/10), use grades 3-4 below flash
+
+    5. GENERAL FITNESS:
+    Purpose: Supporting strength, injury prevention
+    Exercises (3 sets, 6-12 reps): Pull-ups, toe-to-bar, push-ups, biceps curls, triceps extensions, shoulder press, butterflies, reverse butterflies
+    Rest 2 minutes between sets, maintain RPE 8/10
+
+    WARM-UP PROTOCOL:
+    Essential for performance and injury prevention
+    - 10 easy boulders (3 grades below flash)
+    - 5 flash grade boulders (problems you've done before)
+    - Project days only: 1 project grade boulder (one you've done)
+
+    TRAINING CYCLE STRUCTURE:
+    6-Week Cycle:
+    - Weeks 1-4: Regular training
+    - Week 5: Deload (50% volume and intensity)
+    - Week 6: Assessment (test max hangs, benchmarks, hardest projects)
+
+    SESSION PLANNING:
+    Timing Guidelines:
+    - Warm-up: 20 minutes
+    - Fingerboard: 15 minutes  
+    - Main boulder session: 1 hour
+    - Fitness work: 30-60 minutes
+
+    Example High Intensity Day:
+    Warm-up (20min): 10 easy + 5 flash + 1 project grade
+    Fingerboard (15min): 3-5 sets of 10s hangs, 2-3min rest
+    Projects (60min): 3 different boulders, 20min each
+
+    Example Technical Day:
+    Warm-up (20min): 10 easy + 5 flash grade
+    Endurance (60min): Choose progression format, low intensity
+
+    SAFETY & RECOVERY:
+    Stop Training If: Finger pain, extreme fatigue, illness
+    Rest Days: Complete rest priority, optional light activities (stretching, easy running, mobility)
+
+    PROGRESS TRACKING:
+    Track Daily: Sessions completed, RPE after session, working weights, projects attempted
+    Remember: Progress isn't linear, focus long-term, quality over quantity, rest = training
+
+    When providing training advice, always reference these specific protocols and adapt them to the user's current level, equipment, and goals.
+
     WEATHER & OUTDOOR GUIDANCE:
     - Support Hebrew locations (עין פארה, etc.) for Israeli areas
     - Use weatherTool for current conditions and forecasts
@@ -258,6 +355,6 @@ export const climbingAgent = new Agent({
     retentionAnalysis: retentionAnalysisTool
   },
   workflows: {
-    retentionWorkflow
+    simpleRetentionWorkflow
   }
 }); 

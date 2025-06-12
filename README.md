@@ -1,170 +1,130 @@
-# 🧗 ClimbingPill - AI Climbing Coach Platform
+# ClimbingPill 🧗‍♂️
 
-**B2B2C AI-powered climbing training platform using Mastra framework with unified architecture**
+An AI-powered climbing training platform that gets climbers from first contact to personalized training programs in 5 minutes.
 
-## 🎯 Project Overview
+## 🚀 Features
 
-ClimbingPill is a comprehensive AI climbing coach platform that delivers personalized training programs through climbing gyms and coaches to their members. The system targets a 5-minute onboarding experience with 85% completion rate and provides scientific, injury-aware training recommendations.
-
-### **Business Model: B2B2C**
-- **Platform**: Delivered through climbing gyms/coaches to their members
-- **Delivery**: WhatsApp-based program delivery and support  
-- **Value Prop (Climbers)**: Personalized, injury-aware programs via WhatsApp
-- **Value Prop (Gyms)**: Plug-and-play professional training services with minimal overhead
+- **AI-First Design**: Conversational onboarding with intelligent parsing
+- **Comprehensive Assessment**: Physical performance analysis with V-grade prediction
+- **Personalized Programs**: 6-week training cycles with progressive overload
+- **Professional UI**: Modern black/white design with climbing-specific iconography
+- **Real-time Chat**: Direct integration with ClimbingPill AI Coach
+- **Weather Integration**: Outdoor climbing recommendations
+- **Progress Tracking**: Retention analysis and motivation strategies
 
 ## 🏗️ Architecture
 
-### **Unified Agent System**
-- **Single Agent**: `climbingAgent` using OpenAI GPT-4o
-- **11 Integrated Tools**: Goal setting, assessment, program generation, weather, retention analysis
-- **Memory System**: LibSQL storage with Supabase data layer
-- **Workflows**: RetentionWorkflow for progress tracking and engagement
+### Backend (`my-mastra-app/`)
+- **Mastra Framework**: AI agent orchestration
+- **ClimbingPill AI Coach**: Comprehensive climbing methodology
+- **Tools**: Assessment, program generation, weather, retention analysis
+- **Workflows**: Simple retention workflow for user engagement
 
-### **Database: Supabase Production**
-- **Project**: MastraPill (`lxeggioigpyzmkrjdmne`)
-- **Tables**: `user_profiles`, `assessments`, `training_programs`, `training_sessions`, `conversation_history`
-- **Integration**: Full CRUD operations with Mastra tools
-- **Security**: Row Level Security (RLS) enabled
+### Frontend (`frontend/`)
+- **Next.js 15**: React framework with Turbopack
+- **Tailwind CSS 4**: Modern styling with glassmorphism effects
+- **Custom Icons**: Professional climbing-specific SVG icons
+- **Real-time Integration**: Direct connection to Mastra backend
 
-## 🔧 Technical Stack
-
-- **Framework**: [Mastra](https://mastra.ai) - AI agent orchestration
-- **Database**: Supabase (PostgreSQL with real-time features)
-- **AI**: OpenAI GPT-4o for conversational intelligence
-- **Storage**: Hybrid - LibSQL for Mastra internals, Supabase for business data
-- **Deployment**: Ready for WhatsApp Cloud API integration
-
-## 📊 Assessment Methodology
-
-**Scientific Composite Scoring:**
-- **45%** Finger Strength (fingerboard performance)
-- **20%** Pull-up Strength  
-- **15%** Core Strength (toe-to-bar)
-- **10%** Push-up Strength
-- **10%** Flexibility
-
-**Grade Prediction Algorithm:**
-- Normalized scoring (0-100) with confidence levels
-- Strength analysis and weakness identification
-- Personalized recommendations based on climbing style
-
-## 🎯 User Journey (5-Minute Onboarding)
-
-1. **Goal Setting** → Primary climbing objectives
-2. **Level Check** → Current climbing grade assessment  
-3. **Mini Assessment** → Quick physical capability check
-4. **Schedule Setup** → Training frequency and duration
-5. **Equipment Check** → Available training equipment
-6. **Program Generation** → AI-powered personalized program
-
-**Target Metrics:**
-- 85% onboarding completion (vs 60-70% industry)
-- 65% 30-day retention (vs 40-50% industry)
-- 70% program completion (vs 30-40% industry)
-
-## 🛠️ Development Setup
+## 🛠️ Setup
 
 ### Prerequisites
 - Node.js 18+
-- Supabase account
-- OpenAI API key
+- npm or pnpm
 
-### Installation
-
+### Backend Setup
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd PillAgent
-
-# Install dependencies
 cd my-mastra-app
 npm install
-
-# Set up environment variables
-cp .env.example .env
-# Add your OpenAI API key and other configurations
+npm run dev
 ```
+Backend runs on: http://localhost:4112
 
-### Project Structure
-
+### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
 ```
-PillAgent/
-├── docs/                          # Documentation and guides
-├── my-mastra-app/                 # Main Mastra application
-│   ├── src/mastra/
-│   │   ├── agents/                # Unified climbing agent
-│   │   ├── tools/                 # 11 integrated tools
-│   │   ├── workflows/             # Retention and analysis workflows
-│   │   └── lib/                   # Supabase integration
-│   └── scripts/                   # Utility scripts
-└── README.md                      # This file
-```
+Frontend runs on: http://localhost:3000 (or next available port)
 
-## 🔗 Key Integrations
+## 🎯 ClimbingPill Methodology
 
-### **Mastra-Supabase Connection**
-- ✅ Assessment tool saves to `assessments` table
-- ✅ Program generation creates records in `training_programs`
-- ✅ Onboarding updates `user_profiles` 
-- ✅ Conversation history persistence
-- ✅ Retention analysis with historical data
+### Training Philosophy
+Built on progressive overload and specificity - systematic layers of difficulty and complexity.
 
-### **AI Tools Available**
-1. `goalSettingTool` - Capture climbing objectives
-2. `currentLevelCheckTool` - Assess current climbing level
-3. `miniPhysicalAssessmentTool` - Quick capability check
-4. `scheduleSetupTool` - Training schedule configuration
-5. `equipmentCheckTool` - Available equipment assessment
-6. `climbingAssessmentTool` - Comprehensive physical assessment
-7. `programGenerationTool` - AI-powered program creation
-8. `weatherTool` - Climbing weather conditions
-9. `retentionAnalysisTool` - User engagement analysis
-10. `onboardingOrchestratorTool` - Flow management
-11. `onboardingAnalyticsTool` - Progress tracking
+### Core Components
+1. **Fingerboard Training**: Systematic finger strength development
+2. **Boulder Projects**: Strength and power development
+3. **Flash Training**: Reading, planning, executing
+4. **Technical/Endurance**: Climbing stamina and movement efficiency
+5. **General Fitness**: Supporting strength and injury prevention
 
-## 📈 Business Intelligence
+### Assessment System
+- **80% Boulder Grade**: Grade you can complete 8/10 times
+- **Normalized Ratios**: Finger strength, pull-up, core, flexibility
+- **Composite Scoring**: 45% finger + 20% pull + 15% core + 10% push + 10% flex
+- **Grade Prediction**: V4-V8+ with confidence levels
 
-### **Target Demographics**
-- **Age**: 25-50 years old
-- **Experience**: 0.5-3 years climbing
-- **Lifestyle**: Working full-time, limited training time
-- **Pain Points**: Insecurity, injury fear, progress frustration
+## 🎨 Design System
 
-### **Training Methodology**
-- **6-week cycles** with energy systems training
-- **Grade calculations**: Project = 80% + 1, Flash = 80% - 1
-- **Frequency limits**: Fingerboard 2x/week, Projects 2x/week
-- **Progressive overload** protocols with injury prevention
+### Brand Colors
+- **Pink**: #ff4d6d
+- **Lime Green**: #a3d977  
+- **Teal**: #2d9596
 
-## 🚀 Deployment Status
+### Typography
+- **Font**: Inter (Mastra-style)
+- **Hierarchy**: Consistent spacing and weights
+- **High Contrast**: Black/white modern aesthetic
 
-**Current State: Development Complete**
-- ✅ Unified agent architecture implemented
-- ✅ Supabase integration tested and working
-- ✅ All 11 tools connected to production database
-- ✅ Assessment and program generation validated
-- ✅ Memory system operational
+## 🔧 API Integration
 
-**Next Steps:**
-- WhatsApp Cloud API integration
-- Coach dashboard development
-- Gym partner onboarding system
-- Production deployment pipeline
+The frontend connects to the Mastra backend via:
+- **Chat**: `/api/agents/climbingPillAgent/generate`
+- **Real-time responses** from ClimbingPill AI Coach
+- **Fallback handling** for offline scenarios
 
-## 📝 Documentation
+## 📱 User Experience
 
-- [Mastra Implementation Guide](docs/MASTRA_IMPLEMENTATION_GUIDE.md)
-- [Backend Integration Guide](docs/MASTRA_BACKEND_INTEGRATION.md)
-- [UI Mockup](docs/ClimbingPillMockup.tsx)
+### 5-Minute Onboarding Flow
+1. **Goal Setting** (30s): Primary climbing objectives
+2. **Level Check** (60s): Current grade and experience
+3. **Physical Assessment** (2min): Strength and flexibility tests
+4. **Schedule Setup** (45s): Training availability
+5. **Equipment Check** (30s): Available resources
+6. **Program Generation** (15s): Personalized 6-week plan
+
+### AI-First Features
+- **Progressive Disclosure**: Information revealed as needed
+- **Conversation Threading**: Natural dialogue flow
+- **Contextual Actions**: Smart suggestions based on user state
+- **Confidence Indicators**: AI response reliability
+
+## 🚀 Deployment
+
+### Backend
+- Mastra-compatible hosting
+- Environment variables for API keys
+- Database for user profiles and progress
+
+### Frontend
+- Vercel/Netlify deployment
+- Environment variables for backend URL
+- Static asset optimization
 
 ## 🤝 Contributing
 
-This is a private project for ClimbingPill platform development. For questions or collaboration opportunities, please contact the development team.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## 📄 License
 
-Private - All rights reserved
+MIT License - see LICENSE file for details
 
 ---
 
-**Built with ❤️ for the climbing community** 🧗‍♀️🧗‍♂️ 
+**ClimbingPill** - Getting climbers stronger, faster, smarter. 🧗‍♀️✨ 
