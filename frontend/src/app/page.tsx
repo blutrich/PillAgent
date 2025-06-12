@@ -99,11 +99,7 @@ const ClimbingPillApp = () => {
 
     try {
       // Call real Mastra API
-      const response = await climbingPillAPI.chat(inputMessage, {
-        userId: 'demo-user',
-        currentGrade: userData.currentGrade,
-        targetGrade: userData.targetGrade
-      });
+      const response = await climbingPillAPI.chat(inputMessage);
       
       setMessages(prev => [...prev, response]);
       setIsTyping(false);
@@ -259,7 +255,7 @@ const ClimbingPillApp = () => {
               </div>
               <span className="text-white/90 font-medium">AI Optimized Session</span>
             </div>
-            <h2 className="text-2xl font-bold mb-3 tracking-tight">Today's Training</h2>
+            <h2 className="text-2xl font-bold mb-3 tracking-tight">Today&apos;s Training</h2>
             <p className="text-white/90 text-lg mb-2">{programData.nextSession}</p>
             <p className="text-white/80 leading-relaxed">Targeting finger strength weakness • 90 min</p>
           </div>
@@ -360,7 +356,7 @@ const ClimbingPillApp = () => {
                   placeholder="70"
                   className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
                 />
-                <p className="text-xs text-gray-400 mt-1">💬 Ask AI: "Why do you need my weight?"</p>
+                <p className="text-xs text-gray-400 mt-1">💬 Ask AI: &quot;Why do you need my weight?&quot;</p>
               </div>
               
               <div>
@@ -452,7 +448,7 @@ const ClimbingPillApp = () => {
 
       {/* Week Overview */}
       <div className="glass rounded-xl p-6">
-        <h2 className="text-mastra-lg font-semibold mb-4 text-white">This Week's Schedule</h2>
+        <h2 className="text-mastra-lg font-semibold mb-4 text-white">This Week&apos;s Schedule</h2>
         <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
             <div key={day} className={`p-3 rounded-lg text-center transition-all hover:scale-105 ${
