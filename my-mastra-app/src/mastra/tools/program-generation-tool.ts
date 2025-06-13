@@ -425,11 +425,24 @@ function calculateGradeNumber(gradeString: string): number {
 }
 
 function parseAIResponseToStructure(aiResponse: string, availableDays: number): any {
-  // Parse the AI response and convert to our structured format
-  // This is a simplified parser - in production you'd want more robust parsing
+  console.log('Parsing AI response for program structure...');
   
+  // Try to parse JSON if the response contains structured data
+  try {
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.weeks && Array.isArray(parsed.weeks)) {
+        console.log('Successfully parsed structured JSON response');
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.log('AI response is not JSON, using fallback structure generation');
+  }
+  
+  // Fallback: Generate structured program regardless of AI response format
   const weeks = [];
-  const weekMatches = aiResponse.match(/WEEK \d+ - [^\n]+/g) || [];
   
   for (let i = 1; i <= 6; i++) {
     const week = {
@@ -440,6 +453,7 @@ function parseAIResponseToStructure(aiResponse: string, availableDays: number): 
     weeks.push(week);
   }
   
+  console.log(`Generated ${weeks.length} weeks with structured data`);
   return { weeks };
 }
 
@@ -447,36 +461,68 @@ function generateWeekDays(availableDays: number, weekNumber: number): any[] {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const days: any[] = [];
   
-  // Generate training days based on available days
-  const trainingDays = daysOfWeek.slice(0, availableDays);
+  // Generate training days based on available days (typically 3-4 days)
+  const trainingDays = availableDays >= 4 ? 
+    ['Monday', 'Tuesday', 'Thursday', 'Saturday'] : 
+    ['Monday', 'Wednesday', 'Friday'];
   
   trainingDays.forEach((day, index) => {
     if (weekNumber === 6 && index > 1) {
-      // Assessment week - mostly rest days
+      // Assessment week - mostly rest days after first 2 sessions
       days.push({
         day,
         sessions: [{
           type: 'Rest Day',
-          exercises: ['Complete rest or light stretching'],
-          duration: 0,
+          exercises: ['Complete rest or light stretching', 'Mobility work (10-15 minutes)'],
+          duration: 15,
           intensity: 'RPE 1',
-          notes: 'Recovery for assessment week'
+          notes: 'Recovery for assessment week - prepare for grade testing'
         }]
       });
-    } else {
-      // Regular training days
-      const isHighIntensity = index % 2 === 0; // Alternate high/low intensity
+    } else if (weekNumber === 5) {
+      // Deload week - reduced intensity
+      const sessionType = index % 2 === 0 ? 'Light Fingerboard' : 'Technical Volume';
       days.push({
         day,
         sessions: [{
-          type: isHighIntensity ? 'Fingerboard + Projects' : 'Technical + Fitness',
-          exercises: [
-            isHighIntensity ? 'Fingerboard max hangs: 3 sets × 10s' : 'Technical climbing practice',
-            isHighIntensity ? 'Boulder projects at target grade' : 'General fitness circuit'
+          type: sessionType,
+          exercises: sessionType === 'Light Fingerboard' ? [
+            'Fingerboard hangs: 2 sets × 8s (reduced load)',
+            'Easy boulder problems (2-3 grades below max)',
+            'Core activation: 2 sets × 30s planks'
+          ] : [
+            'Technical climbing: 60-70% intensity',
+            'Movement drills and coordination',
+            'Light stretching and mobility'
+          ],
+          duration: 60,
+          intensity: 'RPE 4-5',
+          notes: 'Deload week - focus on recovery and movement quality'
+        }]
+      });
+    } else {
+      // Regular training weeks (1-4)
+      const isFingerboardDay = index % 2 === 0;
+      const sessionType = isFingerboardDay ? 'Fingerboard + Projects' : 'Technical + Fitness';
+      
+      days.push({
+        day,
+        sessions: [{
+          type: sessionType,
+          exercises: isFingerboardDay ? [
+            `Fingerboard max hangs: 3-4 sets × 10s (Week ${weekNumber} progression)`,
+            'Boulder projects at target grade: 45-60 minutes',
+            'Core strength: Toe-to-bar 3 sets × 5-8 reps',
+            'Cool-down stretching: 10 minutes'
+          ] : [
+            'Technical climbing practice: 45 minutes',
+            'Pull-ups: 3 sets × 6-10 reps',
+            'Push-ups: 3 sets × 8-12 reps',
+            'Flexibility work: Hip mobility and shoulders'
           ],
           duration: 90,
-          intensity: isHighIntensity ? 'RPE 8-9' : 'RPE 5-6',
-          notes: `${weekNumber <= 4 ? 'Progressive loading' : weekNumber === 5 ? 'Deload intensity' : 'Assessment prep'}`
+          intensity: isFingerboardDay ? 'RPE 8-9' : 'RPE 6-7',
+          notes: `Week ${weekNumber}: ${weekNumber <= 2 ? 'Base building phase' : 'Intensity building phase'} - ${isFingerboardDay ? 'Focus on max strength' : 'Focus on technique and general fitness'}`
         }]
       });
     }

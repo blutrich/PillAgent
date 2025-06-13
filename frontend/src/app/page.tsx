@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { climbingPillAPI } from '../lib/mastra-client';
+import { useAuth } from '../lib/auth-context';
+import AssessmentView from '../components/AssessmentView';
+import AuthModal from '../components/AuthModal';
 import { 
   ClimbingPillLogo,
   ClimbingGradeIcon,
@@ -26,29 +29,34 @@ import {
   PlayCircle,
   CheckCircle,
   Award,
-  RotateCcw
+  RotateCcw,
+  LogOut,
+  User
 } from 'lucide-react';
 
 const ClimbingPillApp = () => {
+  const { user, userProfile, loading, signOut } = useAuth();
   const [activeView, setActiveView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [messages, setMessages] = useState<Array<{role: string; content: string; confidence?: number}>>([
     { role: 'assistant', content: "Hi! I'm your ClimbingPill AI coach. Ready to crush your climbing goals today?", confidence: 0.95 },
   ]);
-  const [inputMessage, setInputMessage] = useState('');
+  // inputMessage moved to AIChat component
   const [isTyping, setIsTyping] = useState(false);
 
-  // User data - loaded from Mastra backend
+  // User data - loaded from Mastra backend or defaults
   const [userData, setUserData] = useState({
-    name: "Alex Chen",
+    name: userProfile?.first_name ? `${userProfile.first_name} ${userProfile.last_name || ''}`.trim() : "Climber",
     currentGrade: "V7",
     targetGrade: "V8", 
     assessmentScore: 0.82,
     programProgress: 65,
-    subscription: "premium",
-    avatar: "AC"
+    subscription: userProfile?.subscription_tier || "free",
+    avatar: userProfile?.first_name ? userProfile.first_name.charAt(0).toUpperCase() + (userProfile.last_name?.charAt(0).toUpperCase() || '') : "C"
   });
 
   const [programData, setProgramData] = useState({
@@ -56,32 +64,61 @@ const ClimbingPillApp = () => {
     currentWeek: 3,
     totalWeeks: 6,
     nextSession: "Fingerboard + Projects",
-    todayComplete: false
+    todayComplete: false,
+    detailedProgram: null as any // Will store the full 6-week program
   });
 
   // Assessment state
   const [assessmentStep, setAssessmentStep] = useState(1);
   const [assessmentData, setAssessmentData] = useState({
+    // Physical measurements
     bodyWeight: '',
+    height: '',
+    
+    // Performance metrics
+    addedWeight: '', // Weight added for 20mm edge hang
+    hangTime: '', // Dead hang time (for reference)
     pullUpsMax: '',
-    hangTime: '',
+    pushUpsMax: '',
+    toeToBarMax: '',
+    legSpread: '', // Flexibility measurement
+    
+    // Climbing grades
     currentGrade: '',
     targetGrade: '',
+    eightyPercentGrade: '', // 80% success rate grade
+    
+    // Experience
     experience: '',
-    weaknesses: []
+    weaknesses: [],
+    
+    // Training Preferences
+    availableDays: '[]',
+    sessionDuration: '',
+    equipmentAvailable: '[]',
+    trainingFocus: '[]',
+    primaryWeakness: ''
   });
+  const [isGeneratingProgram, setIsGeneratingProgram] = useState(false);
 
-  // Load user data from Mastra on component mount
+  // Load user data from Mastra when user is authenticated
   useEffect(() => {
     const loadUserData = async () => {
+      if (!user) return;
+      
       try {
-        const userId = 'demo-user'; // In real app, get from auth
-        const [userProfile, trainingProgram] = await Promise.all([
-          climbingPillAPI.getUserProfile(userId),
-          climbingPillAPI.getTrainingProgram(userId)
+        const [userProfileData, trainingProgram] = await Promise.all([
+          climbingPillAPI.getUserProfile(user.id),
+          climbingPillAPI.getTrainingProgram(user.id)
         ]);
         
-        setUserData(userProfile);
+        // Update userData with real profile data
+        setUserData(prev => ({
+          ...prev,
+          name: userProfile?.first_name ? `${userProfile.first_name} ${userProfile.last_name || ''}`.trim() : userProfileData.name || "Climber",
+          subscription: userProfile?.subscription_tier || userProfileData.subscription || "free",
+          avatar: userProfile?.first_name ? userProfile.first_name.charAt(0).toUpperCase() + (userProfile.last_name?.charAt(0).toUpperCase() || '') : userProfileData.avatar || "C"
+        }));
         setProgramData(trainingProgram);
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -90,7 +127,7 @@ const ClimbingPillApp = () => {
     };
 
     loadUserData();
-  }, []);
+  }, [user, userProfile]);
 
   const navigation = [
     { id: 'dashboard', label: 'Dashboard', icon: ProgressChartIcon },
@@ -100,34 +137,7 @@ const ClimbingPillApp = () => {
     { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
   ];
 
-  // AI Chat Functions - connected to Mastra backend
-  const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    const userMessage = { role: 'user', content: inputMessage };
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
-    setIsTyping(true);
-
-    try {
-      // Call real Mastra API
-      const response = await climbingPillAPI.chat(inputMessage);
-      
-      setMessages(prev => [...prev, response]);
-      setIsTyping(false);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      // Fallback response
-      const fallbackMessage = { 
-        role: 'assistant', 
-        content: "I'm having trouble connecting right now. Please try again in a moment.",
-        confidence: 0.1
-      };
-      
-      setMessages(prev => [...prev, fallbackMessage]);
-      setIsTyping(false);
-    }
-  };
+  // AI Chat Functions - moved to memoized AIChat component
 
   // Helper Components
   const StatCard = ({ icon: Icon, label, value, sublabel, trend }: {
@@ -339,7 +349,54 @@ const ClimbingPillApp = () => {
 
   // Assessment functions
   const nextAssessmentStep = () => {
-    if (assessmentStep < 5) {
+    // Validate current step before proceeding
+    if (assessmentStep === 1) {
+      if (!assessmentData.bodyWeight || !assessmentData.height) {
+        alert('Please fill in your body weight and height.');
+        return;
+      }
+    } else if (assessmentStep === 2) {
+      if (!assessmentData.addedWeight) {
+        alert('Please enter the added weight for your 10-second hang test.');
+        return;
+      }
+    } else if (assessmentStep === 3) {
+      if (!assessmentData.pullUpsMax || !assessmentData.pushUpsMax || !assessmentData.toeToBarMax) {
+        alert('Please fill in all strength metrics (pull-ups, push-ups, toe-to-bar).');
+        return;
+      }
+    } else if (assessmentStep === 4) {
+      if (!assessmentData.legSpread) {
+        alert('Please enter your leg spread distance.');
+        return;
+      }
+    } else if (assessmentStep === 5) {
+      if (!assessmentData.currentGrade || !assessmentData.targetGrade || !assessmentData.eightyPercentGrade) {
+        alert('Please select all climbing grades (current, target, and 80% success rate).');
+        return;
+      }
+    } else if (assessmentStep === 6) {
+      if (!assessmentData.experience) {
+        alert('Please select your climbing experience level.');
+        return;
+      }
+    } else if (assessmentStep === 7) {
+      const availableDays = JSON.parse(assessmentData.availableDays || '[]');
+      if (availableDays.length === 0) {
+        alert('Please select at least one available training day.');
+        return;
+      }
+      if (!assessmentData.sessionDuration) {
+        alert('Please select your preferred session duration.');
+        return;
+      }
+      if (!assessmentData.primaryWeakness) {
+        alert('Please select your primary training focus.');
+        return;
+      }
+    }
+
+    if (assessmentStep < 8) {
       setAssessmentStep(assessmentStep + 1);
     } else {
       // Complete assessment and generate program
@@ -354,298 +411,225 @@ const ClimbingPillApp = () => {
   };
 
   const completeAssessment = async () => {
+    if (!user) {
+      alert('Please sign in to complete your assessment.');
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setIsGeneratingProgram(true);
+    
     try {
-      // Call Mastra API to conduct assessment
-      await climbingPillAPI.conductAssessment(assessmentData);
+      console.log('Starting assessment with data:', assessmentData);
+      
+      // Validate all required fields
+      const requiredFields = ['bodyWeight', 'height', 'addedWeight', 'pullUpsMax', 'pushUpsMax', 'toeToBarMax', 'legSpread', 'currentGrade', 'targetGrade', 'eightyPercentGrade', 'experience', 'sessionDuration', 'primaryWeakness'];
+      const missingFields = requiredFields.filter(field => !assessmentData[field as keyof typeof assessmentData]);
+      
+      // Check if at least one training day is selected
+      const trainingDays = JSON.parse(assessmentData.availableDays || '[]');
+      if (trainingDays.length === 0) {
+        missingFields.push('availableDays');
+      }
+      
+      if (missingFields.length > 0) {
+        alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+        setIsGeneratingProgram(false);
+        return;
+      }
+      
+      // Calculate composite score using ClimbingPill methodology
+      const { compositeScore, normalizedMetrics } = calculateCompositeScore(assessmentData);
+      const predictedGrade = predictGrade(compositeScore);
+      
+      console.log('Composite Score:', compositeScore);
+      console.log('Predicted Grade:', predictedGrade);
+      console.log('Normalized Metrics:', normalizedMetrics);
+      
+      // Prepare comprehensive assessment data for Mastra API
+      const comprehensiveAssessment = {
+        ...assessmentData,
+        userId: user.id, // Add the real user ID
+        compositeScore: compositeScore.toFixed(3),
+        predictedGrade,
+        normalizedMetrics,
+        assessmentMethodology: 'ClimbingPill Scientific Assessment',
+        timestamp: new Date().toISOString()
+      };
+      
+      // Call Mastra API to conduct assessment with full data
+      const response = await climbingPillAPI.conductAssessment(comprehensiveAssessment);
+      console.log('Assessment response:', response);
+      
+      // Generate detailed training program based on assessment
+      console.log('Generating detailed training program...');
+      
+      // Parse training preferences
+      const selectedDays = JSON.parse(assessmentData.availableDays || '[]');
+      const equipmentAvailable = JSON.parse(assessmentData.equipmentAvailable || '[]');
+      
+      // Map day names to numbers for API
+      const dayMapping: { [key: string]: number } = {
+        'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 
+        'Friday': 5, 'Saturday': 6, 'Sunday': 7
+      };
+      const availableDayNumbers = selectedDays.map((day: string) => dayMapping[day]).filter(Boolean);
+      
+      // Map equipment to API format
+      const equipmentMapping: { [key: string]: string } = {
+        'Home Fingerboard': 'fingerboard',
+        'Gym Access': 'gym',
+        'Pull-up Bar': 'pullup_bar',
+        'Resistance Bands': 'bands',
+        'Weights/Dumbbells': 'weights',
+        'Campus Board': 'campus_board'
+      };
+      const mappedEquipment = equipmentAvailable.map((eq: string) => equipmentMapping[eq]).filter(Boolean);
+      
+      const programResponse = await climbingPillAPI.generateProgram(
+        {
+          predictedGrade,
+          compositeScore,
+          strongestArea: `Finger Strength (${normalizedMetrics.fingerStrength.toFixed(2)})`,
+          weakestArea: `Core Strength (${normalizedMetrics.coreStrength.toFixed(2)})`,
+          fingerStrengthRatio: normalizedMetrics.fingerStrength,
+          pullUpRatio: normalizedMetrics.pullUps,
+          pushUpRatio: normalizedMetrics.pushUps,
+          toeToBarRatio: normalizedMetrics.coreStrength,
+          flexibilityRatio: normalizedMetrics.flexibility,
+          currentGrade: assessmentData.currentGrade,
+          eightyPercentGrade: assessmentData.eightyPercentGrade,
+          addedWeight: parseFloat(assessmentData.addedWeight)
+        },
+        {
+          userId: user.id, // Add the real user ID
+          availableDays: availableDayNumbers,
+          sessionLength: parseInt(assessmentData.sessionDuration),
+          equipment: mappedEquipment.length > 0 ? mappedEquipment : ['fingerboard', 'gym'],
+          goals: [assessmentData.primaryWeakness.replace('_', ' ')],
+          style: 'bouldering',
+          experience: assessmentData.experience,
+          name: 'ClimbingPill User'
+        }
+      );
+      console.log('Program generation response:', programResponse);
+      console.log('Program structure check:', {
+        hasText: !!programResponse?.text,
+        hasWeeks: !!programResponse?.weeks,
+        hasProgramData: !!programResponse?.programData,
+        fullStructure: Object.keys(programResponse || {})
+      });
       
       // Update user data with assessment results
       setUserData(prev => ({
         ...prev,
         currentGrade: assessmentData.currentGrade,
         targetGrade: assessmentData.targetGrade,
-        assessmentScore: 0.85 // Mock score, would come from AI analysis
+        assessmentScore: compositeScore
+      }));
+
+      // Parse program response if it's in text format
+      let parsedProgram = programResponse;
+      if (programResponse?.text && !programResponse?.weeks) {
+        try {
+          // Try to extract JSON from the text response
+          const jsonMatch = programResponse.text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsedProgram = JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) {
+          console.log('Could not parse program JSON from text, using raw response');
+        }
+      }
+
+      // Update program data with detailed program
+      setProgramData(prev => ({
+        ...prev,
+        name: `${assessmentData.targetGrade} Power Development`,
+        currentWeek: 1,
+        totalWeeks: 6,
+        detailedProgram: parsedProgram
       }));
 
       // Switch to dashboard to show results
       setActiveView('dashboard');
       
-      // Show success message
+      // Show success message with detailed analysis
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `Great job completing your assessment! Based on your results, I've created a personalized ${assessmentData.targetGrade} training program. Your current strength level shows you're ready for targeted finger strength and power development.`,
-        confidence: 0.9
+        content: `🎯 Assessment Complete! Your composite score is ${compositeScore.toFixed(2)}, predicting ${predictedGrade} capability. Based on your target of ${assessmentData.targetGrade}, I've generated a comprehensive 6-week training program with detailed daily workouts, progressive loading, and personalized recommendations. Check the Training Program tab to see your complete plan with specific exercises, sets, reps, and coaching notes for each session.`,
+        confidence: 0.95
       }]);
       setChatOpen(true);
       
     } catch (error) {
       console.error('Error completing assessment:', error);
+      alert('There was an error generating your program. Please try again.');
+    } finally {
+      setIsGeneratingProgram(false);
     }
   };
 
-  const updateAssessmentData = (field: string, value: string) => {
+  const updateAssessmentData = useCallback((field: string, value: string) => {
     setAssessmentData(prev => ({
       ...prev,
       [field]: value
     }));
+  }, []);
+
+  // handleInputChange moved to AIChat component
+
+  // Calculate composite score according to ClimbingPill methodology
+  const calculateCompositeScore = (data: typeof assessmentData) => {
+    const bodyWeight = parseFloat(data.bodyWeight);
+    const height = parseFloat(data.height);
+    const addedWeight = parseFloat(data.addedWeight);
+    const pullUps = parseFloat(data.pullUpsMax);
+    const pushUps = parseFloat(data.pushUpsMax);
+    const toeToBar = parseFloat(data.toeToBarMax);
+    const legSpread = parseFloat(data.legSpread);
+
+    // Normalize metrics
+    const normalizedFingerStrength = (addedWeight + bodyWeight) / bodyWeight;
+    const normalizedPullUps = pullUps / bodyWeight;
+    const normalizedPushUps = pushUps / bodyWeight;
+    const normalizedCoreStrength = toeToBar / bodyWeight;
+    const normalizedFlexibility = legSpread / height;
+
+    // Calculate weighted composite score
+    const compositeScore = 
+      (0.45 * normalizedFingerStrength) +
+      (0.20 * normalizedPullUps) +
+      (0.10 * normalizedPushUps) +
+      (0.15 * normalizedCoreStrength) +
+      (0.10 * normalizedFlexibility);
+
+    return {
+      compositeScore,
+      normalizedMetrics: {
+        fingerStrength: normalizedFingerStrength,
+        pullUps: normalizedPullUps,
+        pushUps: normalizedPushUps,
+        coreStrength: normalizedCoreStrength,
+        flexibility: normalizedFlexibility
+      }
+    };
   };
 
-  // Assessment View with AI Guidance
-  const AssessmentView = () => {
-    const progressPercentage = (assessmentStep / 5) * 100;
-    
-    const renderAssessmentStep = () => {
-      switch (assessmentStep) {
-        case 1:
-          return (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Body Weight (kg)
-                </label>
-                <input 
-                  type="number" 
-                  placeholder="70"
-                  value={assessmentData.bodyWeight}
-                  onChange={(e) => updateAssessmentData('bodyWeight', e.target.value)}
-                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
-                />
-                <p className="text-xs text-gray-400 mt-1">💬 Ask AI: &quot;Why do you need my weight?&quot;</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Pull-ups Maximum
-                </label>
-                <input 
-                  type="number" 
-                  placeholder="15"
-                  value={assessmentData.pullUpsMax}
-                  onChange={(e) => updateAssessmentData('pullUpsMax', e.target.value)}
-                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
-                />
-                <p className="text-xs text-gray-400 mt-1">💡 AI Tip: Test when fresh, go to failure</p>
-              </div>
-            </div>
-          );
-        
-        case 2:
-          return (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Dead Hang Time (seconds)
-                </label>
-                <input 
-                  type="number" 
-                  placeholder="45"
-                  value={assessmentData.hangTime}
-                  onChange={(e) => updateAssessmentData('hangTime', e.target.value)}
-                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-400"
-                />
-                <p className="text-xs text-gray-400 mt-1">💡 AI Tip: Use a 20mm edge, full crimp grip</p>
-              </div>
-            </div>
-          );
-        
-        case 3:
-          return (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Current Climbing Grade
-                </label>
-                <select 
-                  value={assessmentData.currentGrade}
-                  onChange={(e) => updateAssessmentData('currentGrade', e.target.value)}
-                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white"
-                >
-                  <option value="">Select your grade</option>
-                  <option value="V4">V4</option>
-                  <option value="V5">V5</option>
-                  <option value="V6">V6</option>
-                  <option value="V7">V7</option>
-                  <option value="V8">V8</option>
-                  <option value="V9">V9</option>
-                  <option value="V10">V10</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Target Grade
-                </label>
-                <select 
-                  value={assessmentData.targetGrade}
-                  onChange={(e) => updateAssessmentData('targetGrade', e.target.value)}
-                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white"
-                >
-                  <option value="">Select target grade</option>
-                  <option value="V5">V5</option>
-                  <option value="V6">V6</option>
-                  <option value="V7">V7</option>
-                  <option value="V8">V8</option>
-                  <option value="V9">V9</option>
-                  <option value="V10">V10</option>
-                  <option value="V11">V11</option>
-                </select>
-              </div>
-            </div>
-          );
-        
-        case 4:
-          return (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Climbing Experience
-                </label>
-                <select 
-                  value={assessmentData.experience}
-                  onChange={(e) => updateAssessmentData('experience', e.target.value)}
-                  className="w-full px-4 py-3 surface-tertiary border border-contrast rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white"
-                >
-                  <option value="">Select experience level</option>
-                  <option value="beginner">Beginner (0-1 years)</option>
-                  <option value="intermediate">Intermediate (1-3 years)</option>
-                  <option value="advanced">Advanced (3-5 years)</option>
-                  <option value="expert">Expert (5+ years)</option>
-                </select>
-              </div>
-            </div>
-          );
-        
-        case 5:
-          return (
-            <div className="space-y-4">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-white mb-4">Assessment Complete!</h3>
-                <p className="text-gray-300 mb-6">
-                  Ready to generate your personalized training program based on your results.
-                </p>
-                <div className="bg-gray-800 rounded-lg p-4 text-left">
-                  <h4 className="font-medium text-white mb-2">Your Results:</h4>
-                  <ul className="text-sm text-gray-300 space-y-1">
-                    <li>• Current Grade: {assessmentData.currentGrade}</li>
-                    <li>• Target Grade: {assessmentData.targetGrade}</li>
-                    <li>• Pull-ups: {assessmentData.pullUpsMax}</li>
-                    <li>• Hang Time: {assessmentData.hangTime}s</li>
-                    <li>• Experience: {assessmentData.experience}</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          );
-        
-        default:
-          return null;
-      }
-    };
-
-    const getStepTitle = () => {
-      switch (assessmentStep) {
-        case 1: return "Physical Strength";
-        case 2: return "Finger Strength";
-        case 3: return "Climbing Grades";
-        case 4: return "Experience Level";
-        case 5: return "Review & Generate";
-        default: return "Assessment";
-      }
-    };
-
-    const getStepDescription = () => {
-      switch (assessmentStep) {
-        case 1: return "Basic strength measurements";
-        case 2: return "Finger and grip strength";
-        case 3: return "Current and target grades";
-        case 4: return "Your climbing background";
-        case 5: return "Generate your program";
-        default: return "";
-      }
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-mastra-2xl font-semibold mb-2 text-white">Physical Assessment</h1>
-          <p className="text-gray-400">Get your personalized training program based on scientific analysis</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Assessment Form */}
-          <div className="lg:col-span-2">
-            <div className="glass rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-mastra-xl font-semibold text-white">Assessment Progress</h2>
-                <span className="text-sm text-gray-400">Step {assessmentStep} of 5</span>
-              </div>
-              
-              <div className="w-full bg-gray-800 rounded-full h-2 mb-6">
-                <div 
-                  className="bg-white h-2 rounded-full transition-all duration-300" 
-                  style={{width: `${progressPercentage}%`}}
-                ></div>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-2">{getStepTitle()}</h3>
-                <p className="text-gray-400 text-sm">{getStepDescription()}</p>
-              </div>
-
-              {renderAssessmentStep()}
-
-              <div className="flex justify-between mt-6">
-                <button 
-                  onClick={prevAssessmentStep}
-                  disabled={assessmentStep === 1}
-                  className="px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white border border-gray-600 hover:bg-gray-800"
-                >
-                  Previous
-                </button>
-                <button 
-                  onClick={nextAssessmentStep}
-                  className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                >
-                  {assessmentStep === 5 ? 'Generate Program' : 'Continue Assessment'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Assessment Assistant */}
-          <div className="lg:col-span-1">
-            <div className="glass-strong rounded-xl p-6">
-              <div className="flex items-center mb-4">
-                <AICoachIcon className="w-6 h-6 text-white mr-2" />
-                <h3 className="font-semibold text-white">AI Assessment Guide</h3>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="surface-tertiary p-3 rounded-lg border border-contrast">
-                  <p className="font-medium text-white">Current Test: {getStepTitle()}</p>
-                  <p className="text-gray-300">{getStepDescription()}</p>
-                </div>
-                <div className="surface-tertiary p-3 rounded-lg border border-contrast">
-                  <p className="font-medium text-white">Pro Tip:</p>
-                  <p className="text-gray-300">
-                    {assessmentStep === 1 && "Test when fresh for accurate results"}
-                    {assessmentStep === 2 && "Use proper form - no swinging or kipping"}
-                    {assessmentStep === 3 && "Be honest about your current abilities"}
-                    {assessmentStep === 4 && "Include all climbing disciplines"}
-                    {assessmentStep === 5 && "Your program will be tailored to your results"}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setChatOpen(true)}
-                  className="w-full bg-white text-black py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors"
-                >
-                  💬 Ask about this test
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  // Predict grade based on composite score
+  const predictGrade = (compositeScore: number) => {
+    if (compositeScore > 1.45) return 'V12';
+    if (compositeScore >= 1.30) return 'V11';
+    if (compositeScore >= 1.15) return 'V10';
+    if (compositeScore >= 1.05) return 'V9';
+    if (compositeScore >= 0.95) return 'V8';
+    if (compositeScore >= 0.85) return 'V7';
+    if (compositeScore >= 0.75) return 'V6';
+    if (compositeScore >= 0.65) return 'V5';
+    return 'V4';
   };
+
+
 
   // Training View
   const TrainingView = () => (
@@ -689,36 +673,179 @@ const ClimbingPillApp = () => {
       {/* Week Overview */}
       <div className="glass rounded-xl p-6">
         <h2 className="text-mastra-lg font-semibold mb-4 text-white">This Week&apos;s Schedule</h2>
-        <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
-            <div key={day} className={`p-3 rounded-lg text-center transition-all hover:scale-105 ${
-              index === 2 ? 'bg-white text-black border-2 border-white shadow-md' : 
-              index < 2 ? 'surface-tertiary border border-contrast' : 'surface-primary border border-contrast hover:bg-gray-800'
-            }`}>
-              <p className={`text-xs font-medium ${index === 2 ? 'text-gray-600' : 'text-gray-400'}`}>{day}</p>
-              <p className={`text-sm mt-1 font-medium ${index === 2 ? 'text-black' : 'text-white'}`}>
-                {index === 0 ? 'Fingerboard' :
-                 index === 1 ? 'Rest' :
-                 index === 2 ? 'Projects' :
-                 index === 3 ? 'Flash' :
-                 index === 4 ? 'Rest' :
-                 index === 5 ? 'Endurance' :
-                 'Rest'}
-              </p>
-              {index === 2 && (
-                <div className="mt-2">
-                  <span className="text-xs bg-black text-white px-2 py-1 rounded">Today</span>
+        {programData.detailedProgram ? (
+          <div className="space-y-4">
+            {/* Current Week Details */}
+            {programData.detailedProgram.weeks?.find((w: any) => w.weekNumber === programData.currentWeek)?.days?.map((dayData: any, index: number) => (
+              <div key={dayData.day} className={`p-4 rounded-lg border transition-all hover:scale-[1.02] ${
+                index === 2 ? 'bg-white text-black border-white shadow-md' : 'surface-primary border-contrast'
+              }`}>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className={`font-semibold ${index === 2 ? 'text-black' : 'text-white'}`}>
+                    {dayData.day}
+                    {index === 2 && <span className="ml-2 text-xs bg-black text-white px-2 py-1 rounded">Today</span>}
+                  </h3>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+                {dayData.sessions?.map((session: any, sessionIndex: number) => (
+                  <div key={sessionIndex} className="mb-3 last:mb-0">
+                    <p className={`text-sm font-medium ${index === 2 ? 'text-gray-700' : 'text-gray-300'}`}>
+                      {session.type} • {session.duration}min • {session.intensity}
+                    </p>
+                    <div className={`text-xs mt-1 ${index === 2 ? 'text-gray-600' : 'text-gray-400'}`}>
+                      {session.exercises?.slice(0, 2).join(' • ')}
+                      {session.exercises?.length > 2 && ` • +${session.exercises.length - 2} more`}
+                    </div>
+                    {session.notes && (
+                      <p className={`text-xs mt-1 italic ${index === 2 ? 'text-gray-500' : 'text-gray-500'}`}>
+                        {session.notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )) || (
+              <div className="text-center text-gray-400 py-8">
+                <p>Detailed program loading...</p>
+                {programData.detailedProgram && (
+                  <div className="mt-4 text-xs">
+                    <p>Debug: Program data structure:</p>
+                    <pre className="text-left bg-gray-800 p-2 rounded mt-2 overflow-auto max-h-32">
+                      {JSON.stringify(Object.keys(programData.detailedProgram), null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Fallback to simple schedule if detailed program not loaded
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+              <div key={day} className={`p-3 rounded-lg text-center transition-all hover:scale-105 ${
+                index === 2 ? 'bg-white text-black border-2 border-white shadow-md' : 
+                index < 2 ? 'surface-tertiary border border-contrast' : 'surface-primary border border-contrast hover:bg-gray-800'
+              }`}>
+                <p className={`text-xs font-medium ${index === 2 ? 'text-gray-600' : 'text-gray-400'}`}>{day}</p>
+                <p className={`text-sm mt-1 font-medium ${index === 2 ? 'text-black' : 'text-white'}`}>
+                  {index === 0 ? 'Fingerboard' :
+                   index === 1 ? 'Rest' :
+                   index === 2 ? 'Projects' :
+                   index === 3 ? 'Flash' :
+                   index === 4 ? 'Rest' :
+                   index === 5 ? 'Endurance' :
+                   'Rest'}
+                </p>
+                {index === 2 && (
+                  <div className="mt-2">
+                    <span className="text-xs bg-black text-white px-2 py-1 rounded">Today</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Detailed Program View */}
+      {programData.detailedProgram && (
+        <div className="glass rounded-xl p-6">
+          <h2 className="text-mastra-lg font-semibold mb-4 text-white">Complete 6-Week Program</h2>
+          <div className="space-y-6">
+            {programData.detailedProgram.weeks?.map((week: any) => (
+              <div key={week.weekNumber} className={`border rounded-lg p-4 ${
+                week.weekNumber === programData.currentWeek ? 'border-white bg-gray-800/50' : 'border-gray-600'
+              }`}>
+                <h3 className="text-white font-semibold mb-2">
+                  Week {week.weekNumber} - {week.focus}
+                  {week.weekNumber === programData.currentWeek && (
+                    <span className="ml-2 text-xs bg-white text-black px-2 py-1 rounded">Current</span>
+                  )}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {week.days?.map((day: any) => (
+                    <div key={day.day} className="surface-primary border border-contrast rounded p-3">
+                      <h4 className="text-white text-sm font-medium mb-2">{day.day}</h4>
+                      {day.sessions?.map((session: any, idx: number) => (
+                        <div key={idx} className="text-xs text-gray-300 mb-2 last:mb-0">
+                          <p className="font-medium">{session.type}</p>
+                          <p className="text-gray-400">{session.duration}min • {session.intensity}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* AI Insights */}
+          {programData.detailedProgram.aiInsights && (
+            <div className="mt-6 p-4 bg-gray-800/30 rounded-lg border border-gray-600">
+              <h4 className="text-white font-semibold mb-2">AI Program Insights</h4>
+              <ul className="text-gray-300 text-sm space-y-1">
+                {programData.detailedProgram.aiInsights.map((insight: string, idx: number) => (
+                  <li key={idx} className="flex items-start">
+                    <span className="text-gray-500 mr-2">•</span>
+                    {insight}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
-  // AI Chat Component
-  const AIChat = () => (
+  // AI Chat Component - Memoized to prevent re-renders
+  const AIChat = memo(function AIChat() {
+    const [localInputMessage, setLocalInputMessage] = useState('');
+    
+    const handleLocalInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      setLocalInputMessage(e.target.value);
+    }, []);
+    
+    const handleSendMessage = useCallback(async () => {
+      if (!localInputMessage.trim()) return;
+
+      if (!user) {
+        alert('Please sign in to chat with your AI coach.');
+        setAuthModalOpen(true);
+        return;
+      }
+
+      const userMessage = { role: 'user', content: localInputMessage };
+      setMessages(prev => [...prev, userMessage]);
+      setLocalInputMessage('');
+      setIsTyping(true);
+
+      try {
+        const response = await climbingPillAPI.chat(localInputMessage, user.id);
+        setMessages(prev => [...prev, response]);
+        setIsTyping(false);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        const fallbackMessage = { 
+          role: 'assistant', 
+          content: "I'm having trouble connecting right now. Please try again in a moment.",
+          confidence: 0.1
+        };
+        setMessages(prev => [...prev, fallbackMessage]);
+        setIsTyping(false);
+      }
+    }, [localInputMessage, user]);
+
+    const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleSendMessage();
+      }
+    }, [handleSendMessage]);
+
+    const handleSuggestionClick = useCallback((suggestion: string) => {
+      setLocalInputMessage(suggestion);
+    }, []);
+
+    return (
     <div className={`fixed transition-all duration-300 z-50 ${
       chatMinimized 
         ? 'bottom-6 right-6 w-80 h-12' 
@@ -797,7 +924,7 @@ const ClimbingPillApp = () => {
               {['Explain my weakness', 'Why this exercise?', 'Modify program'].map((suggestion) => (
                 <button
                   key={suggestion}
-                  onClick={() => setInputMessage(suggestion)}
+                  onClick={() => handleSuggestionClick(suggestion)}
                   className="whitespace-nowrap text-xs surface-tertiary text-gray-300 px-3 py-1 rounded-full hover:bg-gray-700 hover:text-white transition-colors border border-contrast"
                 >
                   {suggestion}
@@ -810,11 +937,11 @@ const ClimbingPillApp = () => {
           <div className="p-4 border-t border-contrast">
             <div className="flex space-x-2">
               <input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
+                value={localInputMessage}
+                onChange={handleLocalInputChange}
                 placeholder="Ask about training, exercises, or climbing..."
                 className="flex-1 px-3 py-2 surface-tertiary border border-contrast rounded-lg focus:outline-none focus:ring-2 focus:ring-white text-sm text-white placeholder-gray-400"
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyPress={handleKeyPress}
                 aria-label="Chat input"
               />
               <button 
@@ -824,7 +951,7 @@ const ClimbingPillApp = () => {
                 <Mic className="w-5 h-5" />
               </button>
               <button 
-                onClick={sendMessage}
+                onClick={handleSendMessage}
                 className="bg-white text-black p-2 rounded-lg hover:bg-gray-200 transition-colors"
                 aria-label="Send message"
               >
@@ -835,7 +962,8 @@ const ClimbingPillApp = () => {
         </>
       )}
     </div>
-  );
+    );
+  });
 
   const Sidebar = () => (
     <div className={`fixed inset-y-0 left-0 z-40 w-64 surface-secondary border-r border-contrast transform transition-transform duration-300 ${
@@ -878,33 +1006,99 @@ const ClimbingPillApp = () => {
         ))}
       </nav>
 
-      {/* User Profile */}
+      {/* User Profile / Auth */}
       <div className="absolute bottom-6 left-6 right-6">
-        <div className="flex items-center space-x-3 p-3 surface-tertiary rounded-lg border border-contrast">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black font-medium">
-            {userData.avatar}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-mastra-sm font-medium truncate text-white">{userData.name}</p>
-            <div className="flex items-center space-x-2">
-              <p className="text-xs text-gray-400 capitalize">{userData.subscription}</p>
-              <AICoachIcon className="w-3 h-3 text-white" />
+        {user ? (
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3 p-3 surface-tertiary rounded-lg border border-contrast">
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black font-medium">
+                {userData.avatar}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-mastra-sm font-medium truncate text-white">{userData.name}</p>
+                <div className="flex items-center space-x-2">
+                  <p className="text-xs text-gray-400 capitalize">{userData.subscription}</p>
+                  <AICoachIcon className="w-3 h-3 text-white" />
+                </div>
+              </div>
+              <button
+                onClick={signOut}
+                className="text-gray-400 hover:text-white transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setAuthModalMode('login');
+                setAuthModalOpen(true);
+              }}
+              className="w-full bg-white text-black font-semibold py-3 px-4 rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => {
+                setAuthModalMode('signup');
+                setAuthModalOpen(true);
+              }}
+              className="w-full border border-gray-600 text-white font-medium py-3 px-4 rounded-xl hover:bg-gray-800 transition-colors"
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 
   const renderView = () => {
     switch (activeView) {
-      case 'assessment': return <AssessmentView />;
+      case 'assessment': return (
+        <AssessmentView 
+          assessmentStep={assessmentStep}
+          assessmentData={assessmentData}
+          updateAssessmentData={updateAssessmentData}
+          nextAssessmentStep={nextAssessmentStep}
+          prevAssessmentStep={prevAssessmentStep}
+          isGeneratingProgram={isGeneratingProgram}
+          setChatOpen={setChatOpen}
+        />
+      );
       case 'training': return <TrainingView />;
       case 'progress': return <div className="text-center text-gray-400 mt-20">Progress tracking with AI insights coming soon...</div>;
       case 'schedule': return <div className="text-center text-gray-400 mt-20">Smart scheduling with AI optimization coming soon...</div>;
       default: return <DashboardView />;
     }
   };
+
+  // Show loading screen while auth is initializing
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <svg className="w-12 h-12" viewBox="0 0 100 100" fill="none">
+              <path d="M20 20 C20 10, 30 0, 40 0 L60 0 C70 0, 80 10, 80 20 L80 40 C80 50, 70 60, 60 60 L40 60 C30 60, 20 50, 20 40 Z" fill="#ff4d6d"></path>
+              <circle cx="65" cy="35" r="25" fill="#a3d977"></circle>
+              <path d="M30 40 C20 40, 10 50, 10 60 L10 70 C10 80, 20 90, 30 90 L60 90 C70 90, 80 80, 80 70 L80 60 C80 50, 70 40, 60 40 Z" fill="#2d9596"></path>
+            </svg>
+            <h1 className="text-3xl font-bold text-white">ClimbingPill</h1>
+          </div>
+          <div className="flex space-x-1 justify-center">
+            <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+          </div>
+          <p className="text-gray-400 mt-4">Loading your climbing journey...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black flex">
@@ -932,13 +1126,38 @@ const ClimbingPillApp = () => {
             </button>
             
             <div className="flex items-center space-x-4 ml-auto">
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Current Grade</p>
-                <p className="font-bold text-white">{userData.currentGrade}</p>
-              </div>
-              <div className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center font-medium">
-                {userData.avatar}
-              </div>
+              {user ? (
+                <>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400">Current Grade</p>
+                    <p className="font-bold text-white">{userData.currentGrade}</p>
+                  </div>
+                  <div className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center font-medium">
+                    {userData.avatar}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => {
+                      setAuthModalMode('login');
+                      setAuthModalOpen(true);
+                    }}
+                    className="text-white hover:text-gray-300 transition-colors font-medium"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthModalMode('signup');
+                      setAuthModalOpen(true);
+                    }}
+                    className="bg-white text-black font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -962,6 +1181,13 @@ const ClimbingPillApp = () => {
 
       {/* AI Chat Interface */}
       {chatOpen && <AIChat />}
+
+      {/* Authentication Modal */}
+      <AuthModal 
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 };

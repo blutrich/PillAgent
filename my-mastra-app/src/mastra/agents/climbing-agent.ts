@@ -2,6 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
+// import { UpstashStore, UpstashVector } from '@mastra/upstash'; // BLOCKED: "Dynamic require of crypto" ES modules error
 import { climbingAssessmentTool } from '../tools/climbing-assessment-tool';
 import { programGenerationTool } from '../tools/program-generation-tool';
 import { weatherTool } from '../tools/weather-tool';
@@ -19,11 +20,16 @@ import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow'
 
 const llm = openai('gpt-4o');
 
-// Initialize memory with LibSQLStore for persistence
+// Initialize memory - Simplified configuration for ClimbingPill use case
+// Using LibSQL for storage, no vector search needed for short coaching conversations
 const memory = new Memory({
   storage: new LibSQLStore({
-    url: "file:../mastra.db", // Or your database URL
+    url: "file:./mastra-climbing.db",
   }),
+  options: {
+    lastMessages: 15, // Covers full onboarding + conversation history
+    semanticRecall: false, // Disabled - not needed for structured coaching conversations
+  },
 });
 
 export const climbingAgent = new Agent({
