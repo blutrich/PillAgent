@@ -1,5 +1,7 @@
 // ClimbingPill AI Coach API functions - Connected to Mastra Backend
-const MASTRA_API_BASE = 'http://localhost:4111/api';
+const MASTRA_API_BASE = process.env.NODE_ENV === 'production' 
+  ? 'https://pillagent.mastra.cloud/api'
+  : 'http://localhost:4111/api';
 
 // Import Supabase client for direct database access
 import { supabase } from './supabase';
