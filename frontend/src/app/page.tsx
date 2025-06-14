@@ -150,6 +150,7 @@ const ClimbingPillApp = () => {
           subscription: userProfile?.subscription_tier || userProfileData.subscription || "free",
           avatar: userProfile?.first_name ? userProfile.first_name.charAt(0).toUpperCase() + (userProfile.last_name?.charAt(0).toUpperCase() || '') : userProfileData.avatar || "C"
         }));
+        console.log('Loaded training program:', trainingProgram);
         setProgramData(trainingProgram);
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -913,7 +914,7 @@ const ClimbingPillApp = () => {
                   <div className="mt-4 text-xs">
                     <p>Debug: Program data structure:</p>
                     <pre className="text-left bg-gray-800 p-2 rounded mt-2 overflow-auto max-h-32">
-                      {JSON.stringify(Object.keys(programData.detailedProgram), null, 2)}
+                      {JSON.stringify(programData.detailedProgram, null, 2)}
                     </pre>
                   </div>
                 )}
