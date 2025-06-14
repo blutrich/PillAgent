@@ -81,12 +81,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const result = await auth.signOut()
-    if (!result.error) {
-      setUser(null)
-      setUserProfile(null)
+    try {
+      console.log('Attempting to sign out...')
+      const result = await auth.signOut()
+      console.log('SignOut result:', result)
+      
+      if (!result.error) {
+        setUser(null)
+        setUserProfile(null)
+        console.log('Successfully signed out')
+      } else {
+        console.error('SignOut error:', result.error)
+      }
+      return result
+    } catch (error) {
+      console.error('SignOut exception:', error)
+      return { error }
     }
-    return result
   }
 
   const resetPassword = async (email: string) => {

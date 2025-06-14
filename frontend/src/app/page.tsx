@@ -1044,7 +1044,14 @@ const ClimbingPillApp = () => {
                 </div>
               </div>
               <button
-                onClick={signOut}
+                onClick={async () => {
+                  try {
+                    console.log('Logout button clicked')
+                    await signOut()
+                  } catch (error) {
+                    console.error('Logout button error:', error)
+                  }
+                }}
                 className="text-gray-400 hover:text-white transition-colors"
                 title="Sign out"
               >
