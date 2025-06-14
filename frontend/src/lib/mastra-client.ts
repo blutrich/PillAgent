@@ -248,7 +248,7 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [`Please conduct a comprehensive ClimbingPill assessment using the climbing-assessment tool with this data: ${JSON.stringify(structuredData)}`],
+          messages: [`Please conduct a comprehensive ClimbingPill assessment using the climbingAssessment tool with this data: ${JSON.stringify(structuredData)}`],
           resourceid: structuredData.userId,
           threadId: `assessment-${structuredData.userId}`
         })
@@ -316,7 +316,9 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [`Please generate a detailed 6-week training program using the generate-training-program tool with this data: ${JSON.stringify(programData)}`]
+          messages: [`Please generate a detailed 6-week training program using the programGeneration tool with this data: ${JSON.stringify(programData)}`],
+          resourceid: programData.userId,
+          threadId: `program-${programData.userId}`
         })
       });
 
