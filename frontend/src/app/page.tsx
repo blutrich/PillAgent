@@ -35,6 +35,15 @@ import {
 
 const ClimbingPillApp = () => {
   const { user, userProfile, loading, signOut } = useAuth();
+  
+  // Debug loading state
+  useEffect(() => {
+    console.log('🏠 App component - Auth state:', {
+      user: user ? 'Present' : 'None',
+      userProfile: userProfile ? 'Present' : 'None', 
+      loading: loading
+    });
+  }, [user, userProfile, loading]);
   const [activeView, setActiveView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
