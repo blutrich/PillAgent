@@ -24,47 +24,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { user: currentUser } = await auth.getCurrentUser()
-      setUser(currentUser)
-      
-      if (currentUser) {
-        // Load user profile
-        const { data: profile } = await db.getUserProfile(currentUser.id)
-        setUserProfile(profile)
+      try {
+        console.log('🔄 Getting initial session...')
+        const { user: currentUser, error } = await auth.getCurrentUser()
+        console.log('👤 Current user:', currentUser ? 'Found' : 'None', error ? `Error: ${error.message}` : '')
+        setUser(currentUser)
+        
+        if (currentUser) {
+          console.log('📋 Loading user profile for:', currentUser.id)
+          const { data: profile, error: profileError } = await db.getUserProfile(currentUser.id)
+          console.log('📋 Profile result:', profile ? 'Found' : 'None', profileError ? `Error: ${profileError.message}` : '')
+          setUserProfile(profile)
+        }
+        
+        console.log('✅ Auth initialization complete, setting loading to false')
+        setLoading(false)
+      } catch (error) {
+        console.error('❌ Auth initialization error:', error)
+        setLoading(false)
       }
-      
-      setLoading(false)
     }
 
     getInitialSession()
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        // Load or create user profile
-        let { data: profile, error } = await db.getUserProfile(session.user.id)
+      try {
+        console.log('🔔 Auth state change:', event, session?.user ? 'User present' : 'No user')
+        setUser(session?.user ?? null)
         
-        if (error && error.code === 'PGRST116') {
-          // Profile doesn't exist, create it
-          const { data: newProfile } = await db.createUserProfile(
-            session.user.id,
-            session.user.email!,
-            {
-              firstName: session.user.user_metadata?.first_name,
-              lastName: session.user.user_metadata?.last_name
-            }
-          )
-          profile = newProfile
+        if (session?.user) {
+          console.log('📋 Loading profile for user:', session.user.id)
+          // Load or create user profile
+          let { data: profile, error } = await db.getUserProfile(session.user.id)
+          console.log('📋 Profile query result:', profile ? 'Found' : 'None', error ? `Error: ${error.message}` : '')
+          
+          if (error && error.code === 'PGRST116') {
+            console.log('📝 Creating new profile...')
+            // Profile doesn't exist, create it
+            const { data: newProfile, error: createError } = await db.createUserProfile(
+              session.user.id,
+              session.user.email!,
+              {
+                firstName: session.user.user_metadata?.first_name,
+                lastName: session.user.user_metadata?.last_name
+              }
+            )
+            console.log('📝 Profile creation result:', newProfile ? 'Success' : 'Failed', createError ? `Error: ${createError.message}` : '')
+            profile = newProfile
+          }
+          
+          setUserProfile(profile)
+        } else {
+          setUserProfile(null)
         }
         
-        setUserProfile(profile)
-      } else {
-        setUserProfile(null)
+        console.log('✅ Auth state change complete, setting loading to false')
+        setLoading(false)
+      } catch (error) {
+        console.error('❌ Auth state change error:', error)
+        setLoading(false)
       }
-      
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
