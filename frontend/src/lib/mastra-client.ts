@@ -152,13 +152,30 @@ export const climbingPillAPI = {
       ]);
       
       if (program) {
+        console.log('Raw program from Supabase:', program);
+        console.log('Program data type:', typeof program.program_data);
+        
+        // Parse program_data if it's a string (from JSONB field)
+        let programData = program.program_data;
+        if (typeof programData === 'string') {
+          try {
+            programData = JSON.parse(programData);
+            console.log('Parsed program data:', programData);
+          } catch (e) {
+            console.error('Error parsing program data:', e);
+            programData = null;
+          }
+        } else {
+          console.log('Program data is already an object:', programData);
+        }
+        
         return {
           name: program.program_name || "ClimbingPill Training Program",
           currentWeek: 1,
           totalWeeks: 6,
           nextSession: "Training Session",
           todayComplete: false,
-          detailedProgram: program.program_data
+          detailedProgram: programData
         };
       }
       
