@@ -1,7 +1,8 @@
 // ClimbingPill AI Coach API functions - Connected to Mastra Backend
-const MASTRA_API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://pillagent.mastra.cloud/api'
-  : 'http://localhost:4111/api';
+const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://pill_agent.mastra.cloud/api'
+    : 'http://localhost:4111/api');
 
 // Import Supabase client for direct database access
 import { supabase } from './supabase';
@@ -63,9 +64,9 @@ export const climbingPillAPI = {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          messages: [{ role: 'user', content: message }],
-          resourceId: userId,    // Enable memory!
-          threadId: threadId     // Enable memory!
+          messages: [message],  // API expects Array<string>
+          resourceid: userId,   // API uses lowercase 'resourceid'
+          threadId: threadId    // Thread ID for conversation context
         })
       });
       
@@ -204,11 +205,8 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ 
-            role: 'user', 
-            content: `Start onboarding for new user: ${JSON.stringify(userData)}` 
-          }],
-          resourceId: userId,
+          messages: [`Start onboarding for new user: ${JSON.stringify(userData)}`],
+          resourceid: userId,
           threadId: `onboarding-${userId}`
         })
       });
@@ -250,11 +248,8 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ 
-            role: 'user', 
-            content: `Please conduct a comprehensive ClimbingPill assessment using the climbing-assessment tool with this data: ${JSON.stringify(structuredData)}`
-          }],
-          resourceId: structuredData.userId,
+          messages: [`Please conduct a comprehensive ClimbingPill assessment using the climbing-assessment tool with this data: ${JSON.stringify(structuredData)}`],
+          resourceid: structuredData.userId,
           threadId: `assessment-${structuredData.userId}`
         })
       });
@@ -272,10 +267,7 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ 
-            role: 'user', 
-            content: `Set goals: ${JSON.stringify(goalData)}` 
-          }]
+          messages: [`Set goals: ${JSON.stringify(goalData)}`]
         })
       });
       return await response.json();
@@ -324,10 +316,7 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ 
-            role: 'user', 
-            content: `Please generate a detailed 6-week training program using the generate-training-program tool with this data: ${JSON.stringify(programData)}`
-          }]
+          messages: [`Please generate a detailed 6-week training program using the generate-training-program tool with this data: ${JSON.stringify(programData)}`]
         })
       });
 
@@ -351,10 +340,7 @@ export const climbingPillAPI = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ 
-            role: 'user', 
-            content: `Analyze retention: ${JSON.stringify(retentionData)}` 
-          }]
+          messages: [`Analyze retention: ${JSON.stringify(retentionData)}`]
         })
       });
       return await response.json();
