@@ -27,14 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔄 Getting initial session...')
         
-        // Add timeout to prevent infinite loading
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 10000)
-        )
-        
-        const authPromise = auth.getCurrentUser()
-        
-        const { user: currentUser, error } = await Promise.race([authPromise, timeoutPromise]) as any
+        const { user: currentUser, error } = await auth.getCurrentUser()
         console.log('👤 Current user:', currentUser ? 'Found' : 'None', error ? `Error: ${error.message}` : '')
         setUser(currentUser)
         
@@ -49,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       } catch (error) {
         console.error('❌ Auth initialization error:', error)
-        console.log('⚠️ Setting loading to false due to error/timeout')
+        console.log('⚠️ Setting loading to false due to error')
         setLoading(false)
       }
     }

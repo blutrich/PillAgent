@@ -79,7 +79,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         if (error) {
           setMessage({ type: 'error', text: error.message })
         } else {
-          onClose()
+          setMessage({ type: 'success', text: 'Successfully signed in!' })
+          // Close modal after a brief delay to show success message
+          setTimeout(() => onClose(), 1000)
         }
       } else if (mode === 'signup') {
         const { error } = await signUp(formData.email, formData.password, {
