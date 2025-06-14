@@ -166,21 +166,36 @@ export const dbHelpers = {
 
   // Assessment operations - STANDALONE FOR TESTING
   async createAssessment(assessment: Partial<Assessment>) {
+    console.log('🔄 createAssessment called with:', {
+      user_id: assessment.user_id,
+      predicted_grade: assessment.predicted_grade,
+      composite_score: assessment.composite_score
+    });
+    
     // For testing, create assessment without user_id (allows NULL)
     const assessmentData = { ...assessment };
     
     // Remove user_id if it's a test string that can't convert to UUID
     if (assessmentData.user_id && typeof assessmentData.user_id === 'string' && assessmentData.user_id.startsWith('test-user-')) {
+      console.log('⚠️ Removing test user_id:', assessmentData.user_id);
       delete assessmentData.user_id;
+    } else {
+      console.log('✅ Keeping user_id:', assessmentData.user_id);
     }
 
+    console.log('📤 Inserting assessment data to Supabase...');
     const { data, error } = await supabase
       .from('assessments')
       .insert(assessmentData)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase insert error:', error);
+      throw error;
+    }
+    
+    console.log('✅ Assessment inserted successfully:', data?.id);
     return data;
   },
 
