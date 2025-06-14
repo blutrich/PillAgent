@@ -30,8 +30,7 @@ import {
   CheckCircle,
   Award,
   RotateCcw,
-  LogOut,
-  User
+  LogOut
 } from 'lucide-react';
 
 const ClimbingPillApp = () => {
@@ -59,13 +58,36 @@ const ClimbingPillApp = () => {
     avatar: userProfile?.first_name ? userProfile.first_name.charAt(0).toUpperCase() + (userProfile.last_name?.charAt(0).toUpperCase() || '') : "C"
   });
 
-  const [programData, setProgramData] = useState({
+  const [programData, setProgramData] = useState<{
+    name: string;
+    currentWeek: number;
+    totalWeeks: number;
+    nextSession: string;
+    todayComplete: boolean;
+    detailedProgram: {
+      weeks?: Array<{
+        week: number;
+        focus: string;
+        sessions: Array<{
+          day: string;
+          type: string;
+          exercises: Array<{
+            name: string;
+            sets: string;
+            reps: string;
+            notes: string;
+          }>;
+        }>;
+      }>;
+      aiInsights?: string[];
+    } | null;
+  }>({
     name: "V8 Power Development",
     currentWeek: 3,
     totalWeeks: 6,
     nextSession: "Fingerboard + Projects",
     todayComplete: false,
-    detailedProgram: null as any // Will store the full 6-week program
+    detailedProgram: null
   });
 
   // Assessment state
