@@ -734,29 +734,15 @@ const ClimbingPillApp = () => {
 
       // Parse program response if it's in text format
       let parsedProgram = programResponse;
-      if (programResponse?.text && !programResponse?.weeks) {
-        try {
-          // Try to extract JSON from the text response
-          const jsonMatch = programResponse.text.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            parsedProgram = JSON.parse(jsonMatch[0]);
-          } else {
-            // If no JSON found, create a structured program from the text
-            parsedProgram = {
-              text: programResponse.text,
-              weeks: generateWeeksFromText(programResponse.text),
-              aiInsights: extractInsightsFromText(programResponse.text)
-            };
-          }
-        } catch (e) {
-          console.log('Could not parse program JSON from text, creating structured program');
-          // Create a basic structured program
-          parsedProgram = {
-            text: programResponse.text,
-            weeks: generateBasicProgram(),
-            aiInsights: ['Program generated based on your V7 assessment', 'Focus on finger strength development', 'Progressive overload over 6 weeks']
-          };
-        }
+      
+      // Always create structured program if we don't have weeks
+      if (!programResponse?.weeks) {
+        console.log('Creating structured program from AI response');
+        parsedProgram = {
+          text: programResponse?.text || 'AI-generated training program',
+          weeks: generateBasicProgram(),
+          aiInsights: extractInsightsFromText(programResponse?.text || '')
+        };
       }
 
       // Update program data with detailed program
