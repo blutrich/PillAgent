@@ -193,6 +193,8 @@ export const climbingAssessmentTool = createTool({
 
     // STEP 9: Save Assessment to Supabase
     try {
+      console.log(`🔄 Starting assessment save for user: ${userId}`);
+      
       const assessmentData = {
         user_id: userId,
         assessment_type: assessmentType,
@@ -213,20 +215,44 @@ export const climbingAssessmentTool = createTool({
         notes: `${strongestArea} | ${weakestArea} | Composite: ${compositeScore.toFixed(3)}`
       };
 
+      console.log(`📊 Assessment data prepared:`, {
+        user_id: assessmentData.user_id,
+        predicted_grade: assessmentData.predicted_grade,
+        composite_score: assessmentData.composite_score,
+        confidence_level: assessmentData.confidence_level
+      });
+
       const savedAssessment = await dbHelpers.createAssessment(assessmentData);
       if (savedAssessment) {
-        console.log(`Assessment saved for user ${userId}: ${predictedGrade} (${confidenceLevel} confidence)`);
+        console.log(`✅ Assessment saved successfully for user ${userId}: ${predictedGrade} (${confidenceLevel} confidence)`);
+        console.log(`📝 Saved assessment ID: ${savedAssessment.id}`);
       } else {
-        console.error(`Failed to save assessment for user ${userId}`);
+        console.error(`❌ Failed to save assessment for user ${userId} - no data returned`);
       }
 
       // Also update user profile with latest stats
-      await dbHelpers.updateUserProfile(userId, {
+      console.log(`🔄 Updating user profile for ${userId}`);
+      const profileUpdate = await dbHelpers.updateUserProfile(userId, {
         weight_kg: bodyWeight,
         height_cm: height
       });
+      
+      if (profileUpdate) {
+        console.log(`✅ User profile updated successfully`);
+      } else {
+        console.log(`⚠️ User profile update failed or user doesn't exist yet`);
+      }
+      
     } catch (error) {
-      console.error('Error saving assessment to Supabase:', error);
+      console.error('❌ Error saving assessment to Supabase:', error);
+      if (error instanceof Error) {
+        console.error('❌ Error details:', {
+          message: error.message,
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint
+        });
+      }
       // Continue execution - don't fail the tool if save fails
     }
 
