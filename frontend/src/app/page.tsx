@@ -787,7 +787,7 @@ const ClimbingPillApp = () => {
                   <li key={idx} className="flex items-start">
                     <span className="text-gray-500 mr-2">•</span>
                     {insight}
-                  </li>
+          </li>
                 ))}
               </ul>
             </div>

@@ -2,10 +2,18 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
 const supabaseUrl = 'https://lxeggioigpyzmkrjdmne.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZWdnaW9pZ3B5em1rcmpkbW5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMjkxMDEsImV4cCI6MjA2NDcwNTEwMX0.t4wwIUCkFEAmqhswwVD-24aK3VOo1edn2IWcufok7xA';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Use environment variable for security
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_KEY is not set in environment variables.');
+}
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client using the service role key
+export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 // Database types for TypeScript support
 export interface UserProfile {
