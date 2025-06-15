@@ -108,7 +108,7 @@ export const climbingPillAPI = {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          messages: [contextMessage],  // Include program context with user message
+          messages: [{ role: 'user', content: contextMessage }],  // Fix: Send proper message object format
           resourceid: userId,   // API uses lowercase 'resourceid'
           threadId: threadId    // Thread ID for conversation context
         })
