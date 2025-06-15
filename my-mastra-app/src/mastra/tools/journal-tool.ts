@@ -33,6 +33,23 @@ export const createJournalEntryTool = createTool({
       // Use resourceId from the tool execution context (this is the user ID from the API call)
       const userId = resourceId || 'anonymous';
       
+      console.log('🔍 Journal Tool Debug Info:');
+      console.log('  - resourceId received:', resourceId);
+      console.log('  - resourceId type:', typeof resourceId);
+      console.log('  - userId being used:', userId);
+      console.log('  - context keys:', Object.keys(context));
+      
+      // Validate that userId is a proper UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        console.error('❌ Invalid UUID format for userId:', userId);
+        return {
+          success: false,
+          message: "Failed to save journal entry. Please try again.",
+          error: `Invalid user ID format: "${userId}". Expected UUID format.`
+        };
+      }
+      
       console.log('Creating journal entry for user:', userId);
       
       // Create journal entry in Supabase
