@@ -113,6 +113,26 @@ export const queryJournalTool = createTool({
       // Use resourceId from the tool execution context (this is the user ID from the API call)
       const userId = resourceId || 'anonymous';
       
+      console.log('🔍 Journal Query Tool Debug Info:');
+      console.log('  - resourceId received:', resourceId);
+      console.log('  - resourceId type:', typeof resourceId);
+      console.log('  - userId being used:', userId);
+      console.log('  - query:', query);
+      console.log('  - date_range:', date_range);
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (userId !== 'anonymous' && !uuidRegex.test(userId)) {
+        console.error('❌ Invalid UUID format for userId:', userId);
+        return {
+          success: false,
+          message: 'Invalid user ID format. Please try refreshing the page.',
+          error: `Invalid UUID format: ${userId}`,
+          entries: [],
+          total_count: 0
+        };
+      }
+      
       // Build the query
       let supabaseQuery = supabase
         .from('journal_entries')
