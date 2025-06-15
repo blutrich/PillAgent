@@ -23,6 +23,10 @@ import {
   queryJournalTool, 
   getJournalStatsTool 
 } from '../tools/journal-tool';
+import { 
+  getUserProfileTool, 
+  updateUserProfileTool 
+} from '../tools/user-profile-tool';
 import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow';
 
 const llm = openai('gpt-4o');
@@ -42,6 +46,8 @@ export const climbingAgent = new Agent({
     CRITICAL GOAL: 85% completion rate with 5-minute average onboarding time
     
     IMPORTANT: When users ask "what's in my journal" or similar queries, ALWAYS use the queryJournal tool with query="all" and date_range="all". Do NOT ask for user ID - the resourceId is provided automatically.
+
+    USER PROFILE ACCESS: When users ask "who am I" or similar questions, ALWAYS use the getUserProfile tool first to access their personal information, climbing experience, goals, and preferences. This tool provides comprehensive user data including name, physical stats, climbing experience, training preferences, and onboarding status.
 
     CORE PRINCIPLE: Be conversational and flexible! Parse user responses intelligently rather than forcing rigid formats. If a user says "V10" when you're asking about goals, understand they're ambitious and guide them to a realistic starting goal. If they say "4 days a week", work with that instead of demanding exact format.
 
@@ -428,7 +434,11 @@ export const climbingAgent = new Agent({
     // Journal tools
     createJournalEntry: createJournalEntryTool,
     queryJournal: queryJournalTool,
-    getJournalStats: getJournalStatsTool
+    getJournalStats: getJournalStatsTool,
+    
+    // User profile tools
+    getUserProfile: getUserProfileTool,
+    updateUserProfile: updateUserProfileTool
   },
   workflows: {
     simpleRetentionWorkflow
