@@ -215,6 +215,9 @@ export const queryJournalTool = createTool({
       const formattedEntries = filteredEntries.map(entry => ({
         id: entry.id,
         date: new Date(entry.entry_date).toLocaleDateString(),
+        time: new Date(entry.entry_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        datetime: new Date(entry.entry_date).toLocaleString(),
+        relative_time: getRelativeTime(new Date(entry.entry_date)),
         content: entry.content,
         mood: entry.mood,
         energy_level: entry.energy_level,
@@ -337,6 +340,24 @@ export const getJournalStatsTool = createTool({
     }
   }
 });
+
+// Helper function to get relative time (e.g., "2 hours ago", "yesterday")
+function getRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) === 1 ? '' : 's'} ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) === 1 ? '' : 's'} ago`;
+  return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) === 1 ? '' : 's'} ago`;
+}
 
 // Helper function to generate insights from journal entries
 function generateJournalInsights(entries: any[]) {
