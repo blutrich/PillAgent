@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { climbingPillAPI } from '../../lib/mastra-client'
 import AuthModal from '../../components/AuthModal'
 import AssessmentView from '../../components/AssessmentView'
+import JournalNotice from '../../components/JournalNotice'
 import ReactMarkdown from 'react-markdown'
 
 // Icons
@@ -1190,7 +1191,11 @@ const ClimbingPillApp = () => {
                       : 'bg-gray-800 text-white border border-gray-700'
                   }`}>
                     <div className="text-mastra-sm lg:text-mastra-base leading-relaxed prose prose-invert prose-sm max-w-none">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      {message.role === 'assistant' ? (
+                        <JournalNotice content={message.content} />
+                      ) : (
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      )}
                     </div>
                     {message.role === 'assistant' && message.confidence && (
                       <ConfidenceIndicator confidence={message.confidence} />
@@ -1412,7 +1417,7 @@ const ClimbingPillApp = () => {
         </header>
 
         {/* Main Content Area - Mobile First */}
-        <main className="flex-1 p-4 lg:p-6 max-w-7xl mx-auto w-full pb-20 lg:pb-6">
+        <main className="flex-1 p-4 lg:p-6 max-w-7xl mx-auto w-full mobile-nav-spacing lg:pb-6">
           {renderView()}
         </main>
 
@@ -1447,11 +1452,11 @@ const ClimbingPillApp = () => {
         </nav>
       </div>
 
-      {/* Desktop Floating AI Chat Button */}
+      {/* Desktop Floating AI Chat Button - Hidden on mobile since Coach is in bottom nav */}
       {!chatOpen && (
         <button 
           onClick={() => setChatOpen(true)}
-          className="hidden lg:flex fixed bottom-6 right-6 w-14 h-14 bg-white text-black rounded-full shadow-lg hover:scale-110 transition-transform z-40 items-center justify-center"
+          className="hidden lg:flex fixed floating-bottom-mobile right-6 w-14 h-14 bg-white text-black rounded-full shadow-lg hover:scale-110 transition-transform z-40 items-center justify-center"
         >
           <MessageCircle className="w-6 h-6" />
         </button>

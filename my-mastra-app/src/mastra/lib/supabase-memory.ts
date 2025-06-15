@@ -1,5 +1,5 @@
 import { Memory } from '@mastra/memory';
-import { PostgresStore, PgVector } from '@mastra/pg';
+import { PostgresStore } from '@mastra/pg';
 import { LibSQLStore } from '@mastra/libsql';
 import { openai } from '@ai-sdk/openai';
 
@@ -27,7 +27,6 @@ if (!SUPABASE_SERVICE_KEY) {
  * 
  * This provides:
  * - Persistent memory storage in Supabase PostgreSQL
- * - Vector search capabilities with pgvector
  * - Working memory for persistent user information
  * - Scalable, production-ready memory
  * - Perfect integration with existing Supabase stack
@@ -37,9 +36,6 @@ export function createSupabaseMemory(): Memory {
   if (!SUPABASE_DB_PASSWORD || !SUPABASE_SERVICE_KEY) {
     throw new Error('Missing Supabase credentials for memory storage. Please set SUPABASE_DB_PASSWORD and SUPABASE_SERVICE_KEY environment variables.');
   }
-
-  // PostgreSQL connection string for Supabase
-  const connectionString = `postgresql://postgres:${SUPABASE_DB_PASSWORD}@${SUPABASE_HOST}:${SUPABASE_PORT}/${SUPABASE_DATABASE}`;
 
   console.log('🚀 Initializing Supabase PostgreSQL Memory Storage');
   console.log(`📍 Host: ${SUPABASE_HOST}`);
@@ -55,23 +51,15 @@ export function createSupabaseMemory(): Memory {
       password: SUPABASE_DB_PASSWORD,
     });
 
-    // Initialize vector search with pgvector
-    const pgVector = new PgVector({ 
-      connectionString,
-    });
-
-    // Create memory instance with full Mastra capabilities
+    // Create memory instance with Mastra capabilities (without vector search for now)
     const memory = new Memory({
       storage: postgresStore,
-      vector: pgVector, // Enable semantic recall
-      embedder: openai.embedding("text-embedding-3-small"), // OpenAI embeddings
+      // Note: Vector search temporarily disabled due to bundler issues
+      // vector: pgVector, // Enable semantic recall
+      // embedder: openai.embedding("text-embedding-3-small"), // OpenAI embeddings
       options: {
         lastMessages: 15, // Keep last 15 messages for context
-        semanticRecall: {
-          topK: 3, // Retrieve top 3 most relevant messages
-          messageRange: 2, // Include 2 messages before/after each relevant message
-          scope: 'resource', // Search across all user's conversations
-        },
+        semanticRecall: false, // Temporarily disabled
         workingMemory: {
           enabled: true,
           template: `# ClimbingPill User Profile
@@ -111,9 +99,9 @@ export function createSupabaseMemory(): Memory {
     });
 
     console.log('✅ Supabase PostgreSQL Memory initialized successfully');
-    console.log('🔍 Vector search enabled for semantic recall');
     console.log('🧠 Working memory enabled for user profiles');
     console.log('💾 Memory will persist across deployments');
+    console.log('⚠️ Vector search temporarily disabled due to bundler compatibility');
 
     return memory;
 
@@ -198,12 +186,25 @@ export function createOptimalMemory(): Memory {
   return new Memory({
     storage: new LibSQLStore({
       url: process.env.NODE_ENV === 'production' 
-        ? "file:./mastra-climbing-production.db"
-        : "file:./mastra-climbing.db",
+        ? 'file:memory.db' // In-memory for production (temporary)
+        : 'file:local.db', // Local file for development
     }),
     options: {
-      lastMessages: 15,
+      lastMessages: 10,
       semanticRecall: false,
+      workingMemory: {
+        enabled: true,
+        template: `# ClimbingPill User Profile
+
+## Personal Info
+- Name:
+- Current Grade:
+- Target Grade:
+
+## Session Context
+- Last Topic:
+- Current Focus:`,
+      },
     },
   });
 }

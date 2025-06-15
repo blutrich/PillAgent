@@ -312,9 +312,62 @@ body {
   right: 0;
   background: var(--surface-secondary);
   border-top: 1px solid var(--border-primary);
-  padding: 8px 16px;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 50;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure content doesn't overlap with mobile navigation */
+.mobile-nav-spacing {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav-spacing {
+    padding-bottom: 0;
+  }
+}
+
+/* Floating elements positioning - avoid mobile nav */
+.floating-bottom-mobile {
+  bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .floating-bottom-mobile {
+    bottom: 24px;
+  }
+}
+
+/* Journal notice styling */
+.journal-notice {
+  display: inline-block;
+  background: rgba(163, 217, 119, 0.2); /* Lime green with transparency */
+  color: #a3d977; /* Lime green */
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0 4px;
+  border: 1px solid rgba(163, 217, 119, 0.3);
+  animation: journal-pulse 2s ease-in-out;
+}
+
+@keyframes journal-pulse {
+  0% { 
+    background: rgba(163, 217, 119, 0.4);
+    transform: scale(1);
+  }
+  50% { 
+    background: rgba(163, 217, 119, 0.2);
+    transform: scale(1.05);
+  }
+  100% { 
+    background: rgba(163, 217, 119, 0.2);
+    transform: scale(1);
+  }
 }
 
 /* Scrollable content with momentum */
