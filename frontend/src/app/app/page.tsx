@@ -1459,8 +1459,24 @@ const ClimbingPillApp = () => {
                 <p className="text-xs lg:text-sm text-gray-400">Current Grade</p>
                 <p className="font-bold text-white text-sm lg:text-base">{userData.currentGrade || 'Not Set'}</p>
               </div>
-              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-white text-black rounded-full flex items-center justify-center font-medium text-sm lg:text-base">
-                {userData.avatar}
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 lg:w-10 lg:h-10 bg-white text-black rounded-full flex items-center justify-center font-medium text-sm lg:text-base">
+                  {userData.avatar}
+                </div>
+                {/* Mobile Sign Out Button */}
+                <button
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                    }
+                  }}
+                  className="lg:hidden text-gray-400 hover:text-white transition-colors touch-target-comfortable"
+                  title="Sign out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>

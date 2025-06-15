@@ -13,15 +13,19 @@ export const climbingPillAPI = {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
       if (error) {
         console.log('No assessment found for user:', userId);
         return null;
       }
 
-      return data;
+      if (!data || data.length === 0) {
+        console.log('No assessment found for user:', userId);
+        return null;
+      }
+
+      return data[0]; // Get first item from array
     } catch (error) {
       console.error('Error getting latest assessment:', error);
       return null;
@@ -39,11 +43,10 @@ export const climbingPillAPI = {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout')), 2000)
+        setTimeout(() => reject(new Error('Query timeout')), 5000)
       );
       
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
@@ -54,8 +57,14 @@ export const climbingPillAPI = {
         return null;
       }
 
-      console.log('getLatestProgram: Found program:', data);
-      return data;
+      if (!data || data.length === 0) {
+        console.log('getLatestProgram: No programs found for user:', userId);
+        return null;
+      }
+
+      const latestProgram = data[0]; // Get first item from array
+      console.log('getLatestProgram: Found program:', latestProgram);
+      return latestProgram;
     } catch (error) {
       console.error('Error getting latest program:', error);
       return null;
