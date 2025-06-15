@@ -1,65 +1,28 @@
 import { Memory } from '@mastra/memory';
-import { PostgresStore } from '@mastra/pg';
 import { LibSQLStore } from '@mastra/libsql';
-import { openai } from '@ai-sdk/openai';
-
-// Supabase PostgreSQL connection configuration
-// Extract connection details from Supabase URL: https://lxeggioigpyzmkrjdmne.supabase.co
-const SUPABASE_PROJECT_ID = 'lxeggioigpyzmkrjdmne';
-const SUPABASE_HOST = `db.${SUPABASE_PROJECT_ID}.supabase.co`;
-const SUPABASE_PORT = 5432;
-const SUPABASE_DATABASE = 'postgres';
-
-// Environment variables for Supabase PostgreSQL connection
-const SUPABASE_DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-if (!SUPABASE_DB_PASSWORD) {
-  console.warn('⚠️ SUPABASE_DB_PASSWORD not set - falling back to LibSQL');
-}
-
-if (!SUPABASE_SERVICE_KEY) {
-  console.warn('⚠️ SUPABASE_SERVICE_KEY not set - falling back to LibSQL');
-}
 
 /**
- * Create Supabase PostgreSQL Memory Configuration
+ * Create LibSQL Memory Configuration
  * 
+ * Simple, reliable memory storage that works in all environments
  * This provides:
- * - Persistent memory storage in Supabase PostgreSQL
+ * - Persistent memory storage with LibSQL
  * - Working memory for persistent user information
- * - Scalable, production-ready memory
- * - Perfect integration with existing Supabase stack
+ * - Reliable deployment compatibility
  */
-export function createSupabaseMemory(): Memory {
-  // Check if we have the required credentials
-  if (!SUPABASE_DB_PASSWORD || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Missing Supabase credentials for memory storage. Please set SUPABASE_DB_PASSWORD and SUPABASE_SERVICE_KEY environment variables.');
-  }
-
-  console.log('🚀 Initializing Supabase PostgreSQL Memory Storage');
-  console.log(`📍 Host: ${SUPABASE_HOST}`);
-  console.log(`🗄️ Database: ${SUPABASE_DATABASE}`);
+export function createLibSQLMemory(): Memory {
+  console.log('📁 Initializing LibSQL Memory Storage');
 
   try {
-    // Initialize PostgreSQL storage
-    const postgresStore = new PostgresStore({
-      host: SUPABASE_HOST,
-      port: SUPABASE_PORT,
-      user: 'postgres',
-      database: SUPABASE_DATABASE,
-      password: SUPABASE_DB_PASSWORD,
-    });
-
-    // Create memory instance with Mastra capabilities (without vector search for now)
     const memory = new Memory({
-      storage: postgresStore,
-      // Note: Vector search temporarily disabled due to bundler issues
-      // vector: pgVector, // Enable semantic recall
-      // embedder: openai.embedding("text-embedding-3-small"), // OpenAI embeddings
+      storage: new LibSQLStore({
+        url: process.env.NODE_ENV === 'production' 
+          ? 'file:memory.db' // In-memory for production (temporary)
+          : 'file:local.db', // Local file for development
+      }),
       options: {
-        lastMessages: 15, // Keep last 15 messages for context
-        semanticRecall: false, // Temporarily disabled
+        lastMessages: 15,
+        semanticRecall: false,
         workingMemory: {
           enabled: true,
           template: `# ClimbingPill User Profile
@@ -93,127 +56,34 @@ export function createSupabaseMemory(): Memory {
 - Upcoming Goals:`,
         },
         threads: {
-          generateTitle: true, // Auto-generate conversation titles
+          generateTitle: true,
         },
       },
     });
 
-    console.log('✅ Supabase PostgreSQL Memory initialized successfully');
+    console.log('✅ LibSQL Memory initialized successfully');
     console.log('🧠 Working memory enabled for user profiles');
-    console.log('💾 Memory will persist across deployments');
-    console.log('⚠️ Vector search temporarily disabled due to bundler compatibility');
+    console.log('💾 Memory will persist locally');
 
     return memory;
 
   } catch (error) {
-    console.error('❌ Failed to initialize Supabase PostgreSQL Memory:', error);
-    throw new Error(`Supabase Memory initialization failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Create Supabase Memory without Vector Search
- * 
- * Simpler configuration without vector capabilities
- * Use this if you don't need semantic search
- */
-export function createSupabaseMemorySimple(): Memory {
-  if (!SUPABASE_DB_PASSWORD || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Missing Supabase credentials for memory storage. Please set SUPABASE_DB_PASSWORD and SUPABASE_SERVICE_KEY environment variables.');
-  }
-
-  console.log('🚀 Initializing Simple Supabase PostgreSQL Memory Storage');
-
-  try {
-    const postgresStore = new PostgresStore({
-      host: SUPABASE_HOST,
-      port: SUPABASE_PORT,
-      user: 'postgres',
-      database: SUPABASE_DATABASE,
-      password: SUPABASE_DB_PASSWORD,
-    });
-
-    const memory = new Memory({
-      storage: postgresStore,
-      options: {
-        lastMessages: 15,
-        semanticRecall: false, // Disabled for simplicity
-        workingMemory: {
-          enabled: true,
-          template: `# ClimbingPill User Profile
-
-## Personal Info
-- Name:
-- Current Grade:
-- Target Grade:
-
-## Session Context
-- Last Topic:
-- Current Focus:`,
-        },
-      },
-    });
-
-    console.log('✅ Simple Supabase PostgreSQL Memory initialized');
-    return memory;
-
-  } catch (error) {
-    console.error('❌ Failed to initialize Simple Supabase Memory:', error);
-    throw new Error(`Simple Supabase Memory initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error('❌ Failed to initialize LibSQL Memory:', error);
+    throw new Error(`LibSQL Memory initialization failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 /**
  * Memory Configuration Helper
  * 
- * Automatically chooses the best memory configuration:
- * 1. Supabase PostgreSQL (if credentials available)
- * 2. LibSQL fallback (if Supabase not available)
+ * Uses LibSQL for reliable deployment compatibility
+ * Once deployment is stable, we can add Supabase back
  */
 export function createOptimalMemory(): Memory {
-  // Try Supabase PostgreSQL first
-  if (SUPABASE_DB_PASSWORD && SUPABASE_SERVICE_KEY) {
-    try {
-      return createSupabaseMemorySimple(); // Start with simple version
-    } catch (error) {
-      console.warn('⚠️ Supabase Memory failed, falling back to LibSQL:', error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  // Fallback to LibSQL
-  console.log('📁 Using LibSQL fallback memory storage');
-  
-  return new Memory({
-    storage: new LibSQLStore({
-      url: process.env.NODE_ENV === 'production' 
-        ? 'file:memory.db' // In-memory for production (temporary)
-        : 'file:local.db', // Local file for development
-    }),
-    options: {
-      lastMessages: 10,
-      semanticRecall: false,
-      workingMemory: {
-        enabled: true,
-        template: `# ClimbingPill User Profile
-
-## Personal Info
-- Name:
-- Current Grade:
-- Target Grade:
-
-## Session Context
-- Last Topic:
-- Current Focus:`,
-      },
-    },
-  });
+  console.log('🚀 Using LibSQL memory for reliable deployment');
+  return createLibSQLMemory();
 }
 
-// Export connection details for testing
-export const supabaseConfig = {
-  host: SUPABASE_HOST,
-  port: SUPABASE_PORT,
-  database: SUPABASE_DATABASE,
-  projectId: SUPABASE_PROJECT_ID,
-  hasCredentials: !!(SUPABASE_DB_PASSWORD && SUPABASE_SERVICE_KEY),
-}; 
+// Legacy exports for backward compatibility
+export const createSupabaseMemory = createLibSQLMemory;
+export const createSupabaseMemorySimple = createLibSQLMemory; 
