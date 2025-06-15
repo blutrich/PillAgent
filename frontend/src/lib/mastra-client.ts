@@ -111,7 +111,8 @@ export const climbingPillAPI = {
           messages: [{ role: 'user', content: contextMessage }],  // Fix: Send proper message object format
           resourceid: userId,   // API uses lowercase 'resourceid'
           threadId: threadId    // Thread ID for conversation context
-        })
+        }),
+        signal: AbortSignal.timeout(30000) // 30 second timeout
       });
       
       if (!response.ok) {
@@ -140,6 +141,24 @@ export const climbingPillAPI = {
       }
     } catch (error) {
       console.error('Error chatting with AI coach:', error);
+      
+      // Check for timeout errors
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        return {
+          role: 'assistant',
+          content: 'Sorry, the AI coach is taking longer than usual to respond. Please try again.',
+          confidence: 0.1
+        };
+      }
+      
+      // Check for abort errors (timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          role: 'assistant',
+          content: 'The request timed out. Please try again.',
+          confidence: 0.1
+        };
+      }
       
       // Check if it's a network error vs API error
       if (error instanceof TypeError && error.message.includes('fetch')) {
