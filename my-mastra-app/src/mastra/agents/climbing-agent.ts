@@ -4,6 +4,7 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 // import { UpstashStore, UpstashVector } from '@mastra/upstash'; // BLOCKED: "Dynamic require of crypto" ES modules error
 // import { UpstashRedisStore } from '../lib/upstash-redis-store'; // Available for future integration
+import { createOptimalMemory } from '../lib/supabase-memory';
 import { climbingAssessmentTool } from '../tools/climbing-assessment-tool';
 import { programGenerationTool } from '../tools/program-generation-tool';
 import { weatherTool } from '../tools/weather-tool';
@@ -26,40 +27,11 @@ import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow'
 
 const llm = openai('gpt-4o');
 
-// Initialize memory following Mastra best practices
-// Development: LibSQL file storage for local development  
-// Production: LibSQL with persistent file for now (Upstash Redis integration pending)
-const createMemory = () => {
-  const hasUpstashCredentials = process.env.UPSTASHURL && process.env.UPSTASHTOKEN;
-  
-  if (hasUpstashCredentials) {
-    console.log('🚀 Production environment detected - Using persistent LibSQL storage');
-    console.log('📝 Note: Upstash Redis integration available via custom store (see UPSTASH_REDIS_SOLUTION.md)');
-    // Use LibSQL with persistent file path for production
-    return new Memory({
-      storage: new LibSQLStore({
-        url: "file:./mastra-climbing-production.db",
-      }),
-      options: {
-        lastMessages: 15, // Covers full onboarding + conversation history
-        semanticRecall: false, // Disabled - not needed for structured coaching conversations
-      },
-    });
-  } else {
-    console.log('🔧 Using LibSQL for development memory storage');
-    return new Memory({
-      storage: new LibSQLStore({
-        url: "file:./mastra-climbing.db",
-      }),
-      options: {
-        lastMessages: 15,
-        semanticRecall: false,
-      },
-    });
-  }
-};
-
-const memory = createMemory();
+// Initialize memory with optimal configuration
+// Priority: Supabase PostgreSQL > LibSQL fallback
+// This provides scalable, persistent memory storage integrated with your existing Supabase stack
+console.log('🧠 Initializing ClimbingPill Memory Storage...');
+const memory = createOptimalMemory();
 
 export const climbingAgent = new Agent({
   name: 'ClimbingPill AI Coach',
