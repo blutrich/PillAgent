@@ -3,7 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 // import { UpstashStore, UpstashVector } from '@mastra/upstash'; // BLOCKED: "Dynamic require of crypto" ES modules error
-import { UpstashRedisStore } from '../lib/upstash-redis-store';
+// import { UpstashRedisStore } from '../lib/upstash-redis-store'; // Available for future integration
 import { climbingAssessmentTool } from '../tools/climbing-assessment-tool';
 import { programGenerationTool } from '../tools/program-generation-tool';
 import { weatherTool } from '../tools/weather-tool';
@@ -28,37 +28,23 @@ const llm = openai('gpt-4o');
 
 // Initialize memory following Mastra best practices
 // Development: LibSQL file storage for local development  
-// Production: Upstash Redis for scalable, persistent memory
+// Production: LibSQL with persistent file for now (Upstash Redis integration pending)
 const createMemory = () => {
   const hasUpstashCredentials = process.env.UPSTASHURL && process.env.UPSTASHTOKEN;
   
   if (hasUpstashCredentials) {
-    console.log('🚀 Using Upstash Redis for production memory storage');
-    // Use official @mastra/upstash package (our custom store will be integrated later)
-    try {
-      const { UpstashStore } = require('@mastra/upstash');
-      return new Memory({
-        storage: new UpstashStore({
-          url: process.env.UPSTASHURL,
-          token: process.env.UPSTASHTOKEN,
-        }),
-        options: {
-          lastMessages: 15, // Covers full onboarding + conversation history
-          semanticRecall: false, // Disabled - not needed for structured coaching conversations
-        },
-      });
-    } catch (error) {
-      console.warn('⚠️ Upstash package not available, falling back to LibSQL');
-      return new Memory({
-        storage: new LibSQLStore({
-          url: "file:./mastra-climbing.db",
-        }),
-        options: {
-          lastMessages: 15,
-          semanticRecall: false,
-        },
-      });
-    }
+    console.log('🚀 Production environment detected - Using persistent LibSQL storage');
+    console.log('📝 Note: Upstash Redis integration available via custom store (see UPSTASH_REDIS_SOLUTION.md)');
+    // Use LibSQL with persistent file path for production
+    return new Memory({
+      storage: new LibSQLStore({
+        url: "file:./mastra-climbing-production.db",
+      }),
+      options: {
+        lastMessages: 15, // Covers full onboarding + conversation history
+        semanticRecall: false, // Disabled - not needed for structured coaching conversations
+      },
+    });
   } else {
     console.log('🔧 Using LibSQL for development memory storage');
     return new Memory({
