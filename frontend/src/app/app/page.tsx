@@ -258,10 +258,10 @@ const ClimbingPillApp = () => {
   }, [user, userProfile]);
 
   const navigation = [
-    { id: 'dashboard', label: 'Dashboard', icon: ProgressChartIcon },
+    { id: 'dashboard', label: 'Dashboard', icon: ClimbingMountainIcon },
+    { id: 'training', label: 'Training', icon: PowerTrainingIcon },
     { id: 'assessment', label: 'Assessment', icon: AssessmentIcon },
-    { id: 'training', label: 'Training', icon: TrainingPlanIcon },
-    { id: 'progress', label: 'Progress', icon: StrengthMeterIcon },
+    { id: 'progress', label: 'Progress', icon: ProgressChartIcon },
     { id: 'schedule', label: 'Schedule', icon: ScheduleIcon },
   ];
 
@@ -275,16 +275,16 @@ const ClimbingPillApp = () => {
     sublabel: string;
     trend?: string;
   }) => (
-    <div className="glass rounded-2xl p-6 hover-lift">
+    <div className="card-mobile hover-lift">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-400 font-medium">{label}</p>
-          <p className="text-3xl font-bold mt-2 text-white tracking-tight">{value}</p>
-          <p className="text-sm text-gray-400 mt-1">{sublabel}</p>
-          {trend && <p className="text-sm text-white mt-2 font-medium">{trend}</p>}
+        <div className="flex-1 min-w-0">
+          <p className="text-mastra-sm text-gray-400 font-medium">{label}</p>
+          <p className="text-2xl lg:text-3xl font-bold mt-1 lg:mt-2 text-white tracking-tight">{value}</p>
+          <p className="text-mastra-xs lg:text-mastra-sm text-gray-400 mt-1">{sublabel}</p>
+          {trend && <p className="text-mastra-sm text-white mt-2 font-medium">{trend}</p>}
         </div>
-        <div className="p-3 rounded-2xl bg-gray-800 border border-gray-700">
-          <Icon className="h-8 w-8 text-white" />
+        <div className="p-2 lg:p-3 rounded-xl lg:rounded-2xl bg-gray-800 border border-gray-700 flex-shrink-0">
+          <Icon className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
         </div>
       </div>
     </div>
@@ -299,24 +299,24 @@ const ClimbingPillApp = () => {
   }) => (
     <button 
       onClick={onClick}
-      className="glass-subtle rounded-2xl p-5 text-left hover-lift group"
+      className="btn-mobile glass-subtle text-left hover-lift group w-full"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-start space-x-4">
-          <div className="p-2 rounded-xl bg-gray-800 group-hover:bg-gray-700 transition-colors border border-gray-700">
-            <Icon className="h-6 w-6 text-white" />
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-start space-x-3 lg:space-x-4 flex-1 min-w-0">
+          <div className="p-2 rounded-xl bg-gray-800 group-hover:bg-gray-700 transition-colors border border-gray-700 flex-shrink-0">
+            <Icon className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
           </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="font-semibold text-white text-mastra-base">{title}</h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <h3 className="font-semibold text-white text-mastra-base truncate">{title}</h3>
               {aiSuggested && (
-                <span className="text-xs bg-white text-black px-2.5 py-1 rounded-full font-medium">AI</span>
+                <span className="text-xs bg-white text-black px-2 py-0.5 rounded-full font-medium flex-shrink-0">AI</span>
               )}
             </div>
-            <p className="text-mastra-sm text-gray-400 mt-1">{subtitle}</p>
+            <p className="text-mastra-sm text-gray-400 line-clamp-2">{subtitle}</p>
           </div>
         </div>
-        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-white transition-colors" />
+        <ChevronRight className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0 ml-2" />
       </div>
     </button>
   );
@@ -457,8 +457,8 @@ const ClimbingPillApp = () => {
           <ClimbingMountainIcon className="absolute top-6 right-6 w-28 h-28 text-white/10" />
         </div>
 
-        {/* Smart Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Smart Stats Grid - Mobile First */}
+        <div className="grid-mobile-1">
           <StatCard 
             icon={ClimbingGradeIcon}
             label="Current Grade"
@@ -482,27 +482,27 @@ const ClimbingPillApp = () => {
           />
         </div>
 
-      {/* AI-Enhanced Today's Session */}
-      <div className="gradient-lime-teal rounded-3xl p-8 text-white shadow-2xl">
-        <div className="flex items-center justify-between">
+      {/* AI-Enhanced Today's Session - Mobile First */}
+      <div className="bg-gradient-to-r from-lime-500 to-teal-500 rounded-2xl lg:rounded-3xl p-6 lg:p-8 text-white shadow-2xl">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
           <div className="flex-1">
             <div className="flex items-center mb-3">
               <div className="p-2 rounded-xl bg-white/20 mr-3">
-                <AICoachIcon className="w-5 h-5" />
+                <AICoachIcon className="w-4 h-4 lg:w-5 lg:h-5" />
               </div>
-              <span className="text-white/90 font-medium">AI Optimized Session</span>
+              <span className="text-white/90 font-medium text-sm lg:text-base">AI Optimized Session</span>
             </div>
-            <h2 className="text-2xl font-bold mb-3 tracking-tight">Today&apos;s Training</h2>
+            <h2 className="text-xl lg:text-2xl font-bold mb-3 tracking-tight">Today&apos;s Training</h2>
             <TodaysSessionDisplay />
           </div>
-          <div className="flex flex-col space-y-3">
-            <button className="bg-white text-blue-600 px-8 py-4 rounded-2xl font-semibold hover-lift flex items-center shadow-lg">
-              <PlayCircle className="w-5 h-5 mr-2" />
+          <div className="flex flex-col sm:flex-row lg:flex-col space-y-2 sm:space-y-0 sm:space-x-3 lg:space-x-0 lg:space-y-3">
+            <button className="btn-mobile bg-white text-teal-600 font-semibold hover-lift shadow-lg">
+              <PlayCircle className="w-5 h-5" />
               Start Session
             </button>
             <button 
               onClick={askAboutTodaysSession}
-              className="glass-subtle text-white px-6 py-3 rounded-2xl font-medium hover-lift border-white/20"
+              className="btn-mobile bg-white/20 text-white font-medium hover-lift border border-white/20"
             >
               💬 Ask about this session
             </button>
@@ -516,7 +516,7 @@ const ClimbingPillApp = () => {
           <h2 className="text-xl font-bold text-primary">Quick Actions</h2>
           <span className="text-sm bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-semibold">AI Suggested</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid-mobile-2">
           <ActionButton 
             icon={AssessmentIcon}
             title="Reassess Strength"
@@ -1158,76 +1158,78 @@ const ClimbingPillApp = () => {
     }, [handleSendMessage]);
 
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-black border border-gray-800 rounded-3xl w-full max-w-2xl h-[600px] flex flex-col shadow-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-800">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-teal-500 flex items-center justify-center">
-                <AICoachIcon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">AI Climbing Coach</h3>
-                <p className="text-xs text-gray-400">Always here to help</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setChatOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-4 rounded-2xl ${
-                  message.role === 'user' 
-                    ? 'bg-white text-black' 
-                    : 'bg-gray-800 text-white border border-gray-700'
-                }`}>
-                  <div className="text-sm leading-relaxed prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
-                  </div>
-                  {message.role === 'assistant' && message.confidence && (
-                    <ConfidenceIndicator confidence={message.confidence} />
-                  )}
+      <div className="modal-mobile">
+        <div className="modal-content-mobile">
+          <div className="h-full max-h-[80vh] flex flex-col">
+            {/* Header - Mobile Optimized */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-800">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-r from-pink-500 to-teal-500 flex items-center justify-center">
+                  <AICoachIcon className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-mastra-base">AI Climbing Coach</h3>
+                  <p className="text-mastra-xs text-gray-400">Always here to help</p>
                 </div>
               </div>
-            ))}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-gray-800 text-white p-4 rounded-2xl border border-gray-700">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="p-6 border-t border-gray-800">
-            <div className="flex space-x-3">
-              <input
-                type="text"
-                value={localInputMessage}
-                onChange={handleLocalInputChange}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask your AI coach anything..."
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!localInputMessage.trim() || isTyping}
-                className="bg-white text-black p-3 rounded-2xl hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              <button 
+                onClick={() => setChatOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors touch-target-comfortable"
               >
-                <Send className="h-5 w-5" />
+                <X className="h-5 w-5 lg:h-6 lg:w-6" />
               </button>
+            </div>
+
+            {/* Messages - Mobile Optimized */}
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 scroll-smooth hide-scrollbar">
+              {messages.map((message, index) => (
+                <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] lg:max-w-[80%] p-3 lg:p-4 rounded-2xl ${
+                    message.role === 'user' 
+                      ? 'bg-white text-black' 
+                      : 'bg-gray-800 text-white border border-gray-700'
+                  }`}>
+                    <div className="text-mastra-sm lg:text-mastra-base leading-relaxed prose prose-invert prose-sm max-w-none">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                    {message.role === 'assistant' && message.confidence && (
+                      <ConfidenceIndicator confidence={message.confidence} />
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-800 text-white p-3 lg:p-4 rounded-2xl border border-gray-700">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input - Mobile Optimized */}
+            <div className="pt-4 border-t border-gray-800 safe-area-bottom">
+              <div className="flex space-x-3">
+                <input
+                  type="text"
+                  value={localInputMessage}
+                  onChange={handleLocalInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask your AI coach anything..."
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent text-mastra-base"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!localInputMessage.trim() || isTyping}
+                  className="bg-white text-black p-3 rounded-2xl hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target-comfortable"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1320,9 +1322,17 @@ const ClimbingPillApp = () => {
       case 'training':
         return <TrainingView />;
       case 'progress':
-        return <div>Progress View - Coming Soon</div>;
+        return <div className="text-center py-12">
+          <ProgressChartIcon className="h-16 w-16 mx-auto text-gray-600 mb-4" />
+          <h3 className="text-mastra-xl text-white mb-2">Progress Tracking</h3>
+          <p className="text-gray-400">Coming soon - Track your climbing progress over time</p>
+        </div>;
       case 'schedule':
-        return <div>Schedule View - Coming Soon</div>;
+        return <div className="text-center py-12">
+          <ScheduleIcon className="h-16 w-16 mx-auto text-gray-600 mb-4" />
+          <h3 className="text-mastra-xl text-white mb-2">Training Schedule</h3>
+          <p className="text-gray-400">Coming soon - Manage your training calendar</p>
+        </div>;
       default:
         return <DashboardView />;
     }
@@ -1353,52 +1363,95 @@ const ClimbingPillApp = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black flex">
-      <Sidebar />
+    <div className="min-h-screen bg-black flex flex-col lg:flex-row safe-area-top">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
       
-      {/* Overlay */}
+      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="lg:hidden">
+            <Sidebar />
+          </div>
+        </>
       )}
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-0">
-        {/* Header */}
-        <header className="bg-gray-900 border-b border-gray-800 px-6 py-4 sticky top-0 z-20">
+      <div className="flex-1 flex flex-col min-h-screen lg:min-h-0">
+        {/* Mobile-First Header */}
+        <header className="bg-gray-900 border-b border-gray-800 px-4 lg:px-6 py-3 lg:py-4 sticky top-0 z-20 safe-area-top">
           <div className="flex items-center justify-between">
-            <button 
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-white hover:text-gray-300"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            
-            <div className="flex items-center space-x-4 ml-auto">
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Current Grade</p>
-                <p className="font-bold text-white">{userData.currentGrade}</p>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden text-white hover:text-gray-300 touch-target-comfortable"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <div className="lg:hidden">
+                <ClimbingPillLogo className="h-6" />
               </div>
-              <div className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center font-medium">
+            </div>
+            
+            <div className="flex items-center space-x-3 lg:space-x-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs lg:text-sm text-gray-400">Current Grade</p>
+                <p className="font-bold text-white text-sm lg:text-base">{userData.currentGrade || 'Not Set'}</p>
+              </div>
+              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-white text-black rounded-full flex items-center justify-center font-medium text-sm lg:text-base">
                 {userData.avatar}
               </div>
             </div>
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="p-6 max-w-7xl mx-auto">
+        {/* Main Content Area - Mobile First */}
+        <main className="flex-1 p-4 lg:p-6 max-w-7xl mx-auto w-full pb-20 lg:pb-6">
           {renderView()}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="mobile-nav lg:hidden">
+          <div className="flex justify-around items-center">
+            {navigation.slice(0, 4).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveView(item.id);
+                  setSidebarOpen(false);
+                }}
+                className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors touch-target-comfortable ${
+                  activeView === item.id
+                    ? 'text-white bg-gray-800'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="text-xs font-medium">{item.label}</span>
+              </button>
+            ))}
+            <button
+              onClick={() => setChatOpen(true)}
+              className="flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors touch-target-comfortable text-gray-400 hover:text-white"
+            >
+              <MessageCircle className="h-5 w-5" />
+              <span className="text-xs font-medium">Coach</span>
+            </button>
+          </div>
+        </nav>
       </div>
 
-      {/* Floating AI Chat Button */}
+      {/* Desktop Floating AI Chat Button */}
       {!chatOpen && (
         <button 
           onClick={() => setChatOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-white text-black rounded-full shadow-lg hover:scale-110 transition-transform z-40 flex items-center justify-center"
+          className="hidden lg:flex fixed bottom-6 right-6 w-14 h-14 bg-white text-black rounded-full shadow-lg hover:scale-110 transition-transform z-40 items-center justify-center"
         >
           <MessageCircle className="w-6 h-6" />
         </button>
