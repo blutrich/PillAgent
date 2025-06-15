@@ -15,7 +15,7 @@ const GoalSettingSchema = z.object({
 });
 
 const CurrentLevelSchema = z.object({
-  hardestGrade: z.enum(['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8+'])
+  hardestGrade: z.enum(['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15+'])
     .describe('Hardest boulder grade successfully sent'),
   confidenceLevel: z.number().min(1).max(5)
     .describe('Confidence in this grade (1-5 scale)'),
@@ -133,7 +133,10 @@ export const currentLevelCheckTool = createTool({
   execute: async ({ context }) => {
     const { hardestGrade, confidenceLevel, yearsClimbing } = context;
     // Convert grade to numeric for analysis
-    const gradeNumbers = { V0: 0, V1: 1, V2: 2, V3: 3, V4: 4, V5: 5, V6: 6, V7: 7, 'V8+': 8 };
+    const gradeNumbers = { 
+      V0: 0, V1: 1, V2: 2, V3: 3, V4: 4, V5: 5, V6: 6, V7: 7, V8: 8, 
+      V9: 9, V10: 10, V11: 11, V12: 12, V13: 13, V14: 14, 'V15+': 15 
+    };
     const numericGrade = gradeNumbers[hardestGrade as keyof typeof gradeNumbers];
     
     let levelAnalysis = `You're climbing ${hardestGrade} with ${yearsClimbing} years of experience. `;
