@@ -1,4 +1,5 @@
 // ClimbingPill AI Coach API functions - Connected to Mastra Backend
+// Last updated: 2025-01-15 - Fixed timeout issues and .single() queries
 const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 'https://pill_agent.mastra.cloud/api';
 
 // Import Supabase client for direct database access
