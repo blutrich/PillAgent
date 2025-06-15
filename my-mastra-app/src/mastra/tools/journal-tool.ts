@@ -203,7 +203,7 @@ export const queryJournalTool = createTool({
 
       // Filter by content query if provided
       let filteredEntries = entries;
-      if (query && query.trim()) {
+      if (query && query.trim() && query.toLowerCase() !== 'all entries' && query.toLowerCase() !== 'all') {
         const searchTerm = query.toLowerCase();
         filteredEntries = entries.filter(entry => 
           entry.content.toLowerCase().includes(searchTerm) ||
