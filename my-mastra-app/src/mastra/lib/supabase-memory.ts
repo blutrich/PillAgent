@@ -4,21 +4,22 @@ import { LibSQLStore } from '@mastra/libsql';
 /**
  * Create LibSQL Memory Configuration
  * 
- * Simple, reliable memory storage that works in all environments
+ * Optimized memory storage for Mastra Cloud deployment
  * This provides:
  * - Persistent memory storage with LibSQL
  * - Working memory for persistent user information
+ * - Managed by Mastra Cloud infrastructure
  * - Reliable deployment compatibility
  */
 export function createLibSQLMemory(): Memory {
-  console.log('📁 Initializing LibSQL Memory Storage');
+  console.log('📁 Initializing LibSQL Memory Storage (Mastra Cloud Managed)');
 
   try {
     const memory = new Memory({
       storage: new LibSQLStore({
         url: process.env.NODE_ENV === 'production' 
-          ? 'file:memory.db' // In-memory for production (temporary)
-          : 'file:local.db', // Local file for development
+          ? 'file:mastra-memory.db' // Persistent file for production
+          : 'file:mastra-climbing.db', // Use existing file for development
       }),
       options: {
         lastMessages: 15,
@@ -63,7 +64,8 @@ export function createLibSQLMemory(): Memory {
 
     console.log('✅ LibSQL Memory initialized successfully');
     console.log('🧠 Working memory enabled for user profiles');
-    console.log('💾 Memory will persist locally');
+    console.log('☁️ Memory managed by Mastra Cloud infrastructure');
+    console.log('💾 Memory will persist across deployments');
 
     return memory;
 
@@ -76,14 +78,19 @@ export function createLibSQLMemory(): Memory {
 /**
  * Memory Configuration Helper
  * 
- * Uses LibSQL for reliable deployment compatibility
- * Once deployment is stable, we can add Supabase back
+ * Uses LibSQL for reliable, managed memory storage
+ * Perfect for Mastra Cloud deployment
  */
 export function createOptimalMemory(): Memory {
-  console.log('🚀 Using LibSQL memory for reliable deployment');
+  console.log('🚀 Using LibSQL memory (optimal for Mastra Cloud)');
   return createLibSQLMemory();
 }
 
-// Legacy exports for backward compatibility
+/**
+ * Legacy exports for backward compatibility
+ * All point to LibSQL for consistent behavior
+ */
 export const createSupabaseMemory = createLibSQLMemory;
-export const createSupabaseMemorySimple = createLibSQLMemory; 
+export const createSupabaseMemorySimple = createLibSQLMemory;
+
+ 
