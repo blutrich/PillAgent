@@ -22,20 +22,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session with timeout
     const getInitialSession = async () => {
       try {
         console.log('🔄 Getting initial session...')
         
-        const { user: currentUser, error } = await auth.getCurrentUser()
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 10000)
+        )
+        
+        const sessionPromise = auth.getCurrentUser()
+        
+        const { user: currentUser, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any
+        
         console.log('👤 Current user:', currentUser ? 'Found' : 'None', error ? `Error: ${error.message}` : '')
         setUser(currentUser)
         
         if (currentUser) {
           console.log('📋 Loading user profile for:', currentUser.id)
-          const { data: profile, error: profileError } = await db.getUserProfile(currentUser.id)
-          console.log('📋 Profile result:', profile ? 'Found' : 'None', profileError ? `Error: ${profileError.message}` : '')
-          setUserProfile(profile)
+          try {
+            const { data: profile, error: profileError } = await db.getUserProfile(currentUser.id)
+            console.log('📋 Profile result:', profile ? 'Found' : 'None', profileError ? `Error: ${profileError.message}` : '')
+            setUserProfile(profile)
+          } catch (profileErr) {
+            console.error('📋 Profile loading error:', profileErr)
+            // Continue without profile
+          }
         }
         
         console.log('✅ Auth initialization complete, setting loading to false')
@@ -43,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('❌ Auth initialization error:', error)
         console.log('⚠️ Setting loading to false due to error')
+        // Set user to null and continue
+        setUser(null)
+        setUserProfile(null)
         setLoading(false)
       }
     }

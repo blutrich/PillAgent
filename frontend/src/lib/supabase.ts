@@ -53,8 +53,15 @@ export const auth = {
 
   // Get current user
   async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    return { user, error }
+    try {
+      console.log('🔍 Attempting to get current user...')
+      const { data: { user }, error } = await supabase.auth.getUser()
+      console.log('🔍 getCurrentUser result:', { user: user ? 'Found' : 'None', error: error ? error.message : 'None' })
+      return { user, error }
+    } catch (err) {
+      console.error('🔍 getCurrentUser exception:', err)
+      return { user: null, error: err }
+    }
   },
 
   // Listen to auth state changes

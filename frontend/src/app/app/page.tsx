@@ -82,12 +82,28 @@ const ClimbingPillApp = () => {
   const { user, userProfile, loading, signOut } = useAuth()
   const router = useRouter()
   
+  // Add loading timeout state
+  const [loadingTimeout, setLoadingTimeout] = useState(false)
+  
+  // Add timeout for loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.log('⏰ Loading timeout reached, forcing app to load')
+        setLoadingTimeout(true)
+      }
+    }, 15000) // 15 second timeout
+    
+    return () => clearTimeout(timer)
+  }, [loading])
+  
   // Redirect to landing if not authenticated
   useEffect(() => {
-    if (!loading && !user) {
+    if ((!loading || loadingTimeout) && !user) {
+      console.log('🔄 Redirecting to landing page - no user found')
       router.push('/')
     }
-  }, [user, loading, router])
+  }, [user, loading, loadingTimeout, router])
 
   const [activeView, setActiveView] = useState('dashboard')
   const [chatOpen, setChatOpen] = useState(false)
@@ -1344,7 +1360,7 @@ const ClimbingPillApp = () => {
   };
 
   // Show loading state
-  if (loading) {
+  if (loading && !loadingTimeout) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-center">
@@ -1357,6 +1373,40 @@ const ClimbingPillApp = () => {
             <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
           </div>
           <p className="text-gray-400 mt-4">Loading your climbing journey...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show timeout fallback
+  if (loadingTimeout && !user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-center max-w-md mx-auto px-4">
+          <div className="flex items-center justify-center mb-4">
+            <ClimbingPillLogo className="h-12" />
+          </div>
+          <h2 className="text-xl font-bold mb-4">Connection Issue</h2>
+          <p className="text-gray-400 mb-6">
+            We're having trouble connecting to your account. This might be a temporary network issue.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setLoadingTimeout(false)
+                window.location.reload()
+              }}
+              className="w-full bg-white text-black py-3 px-6 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="w-full border border-gray-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              Back to Home
+            </button>
+          </div>
         </div>
       </div>
     );
