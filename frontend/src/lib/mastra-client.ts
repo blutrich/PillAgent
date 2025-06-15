@@ -58,34 +58,47 @@ export const climbingPillAPI = {
   async chat(message: string, userId: string, threadId: string = 'main-conversation') {
     try {
       // Get user's current program and assessment data to provide context
-      console.log('Chat: Getting program and assessment data for user:', userId);
-      const [programData, assessmentData] = await Promise.all([
-        this.getTrainingProgram(userId),
-        this.getLatestAssessment(userId)
-      ]);
-
-      console.log('Chat: Program data retrieved:', programData);
-      console.log('Chat: Assessment data retrieved:', assessmentData);
-
-      // Build context message with user's current program and assessment
+      // Make this non-blocking - if context fails, continue with just the message
       let contextMessage = message;
-      if (programData?.detailedProgram || assessmentData) {
-        const context = {
-          userMessage: message,
-          currentProgram: programData?.detailedProgram,
-          programName: programData?.name,
-          currentWeek: programData?.currentWeek,
-          assessmentData: assessmentData ? {
-            predictedGrade: assessmentData.predicted_grade,
-            compositeScore: assessmentData.composite_score,
-            currentGrade: assessmentData.current_grade,
-            targetGrade: assessmentData.target_grade
-          } : null
-        };
-        contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
-        console.log('Chat: Sending context message:', contextMessage);
-      } else {
-        console.log('Chat: No program or assessment data found, sending message without context');
+      
+      try {
+        console.log('Chat: Getting program and assessment data for user:', userId);
+        const [programData, assessmentData] = await Promise.all([
+          this.getTrainingProgram(userId).catch(e => {
+            console.warn('Failed to get training program:', e.message);
+            return null;
+          }),
+          this.getLatestAssessment(userId).catch(e => {
+            console.warn('Failed to get assessment:', e.message);
+            return null;
+          })
+        ]);
+
+        console.log('Chat: Program data retrieved:', programData);
+        console.log('Chat: Assessment data retrieved:', assessmentData);
+
+        // Build context message with user's current program and assessment
+        if (programData?.detailedProgram || assessmentData) {
+          const context = {
+            userMessage: message,
+            currentProgram: programData?.detailedProgram,
+            programName: programData?.name,
+            currentWeek: programData?.currentWeek,
+            assessmentData: assessmentData ? {
+              predictedGrade: assessmentData.predicted_grade,
+              compositeScore: assessmentData.composite_score,
+              currentGrade: assessmentData.current_grade,
+              targetGrade: assessmentData.target_grade
+            } : null
+          };
+          contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
+          console.log('Chat: Sending context message:', contextMessage);
+        } else {
+          console.log('Chat: No program or assessment data found, sending message without context');
+        }
+      } catch (contextError) {
+        console.warn('Chat: Context building failed, proceeding with message only:', contextError);
+        // Continue with just the original message
       }
 
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
@@ -110,16 +123,55 @@ export const climbingPillAPI = {
       const data = await response.json();
       console.log('API Response:', data);
       
-      return {
-        role: 'assistant',
-        content: data.text || data.content || 'Sorry, I encountered an error.',
-        confidence: 0.9
-      };
+      // Check if we got a valid response
+      if (data.text || data.content) {
+        return {
+          role: 'assistant',
+          content: data.text || data.content,
+          confidence: 0.9
+        };
+      } else {
+        console.warn('API returned empty response:', data);
+        return {
+          role: 'assistant',
+          content: 'Sorry, I received an empty response. Please try again.',
+          confidence: 0.1
+        };
+      }
     } catch (error) {
       console.error('Error chatting with AI coach:', error);
+      
+      // Check if it's a network error vs API error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return {
+          role: 'assistant',
+          content: 'Sorry, I\'m having trouble connecting to the server right now. Please check your internet connection and try again.',
+          confidence: 0.1
+        };
+      }
+      
+      // For other errors, try to extract meaningful error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('HTTP error')) {
+        return {
+          role: 'assistant',
+          content: 'Sorry, there was a server error. Please try again in a moment.',
+          confidence: 0.1
+        };
+      }
+      
+      // Log the full error for debugging
+      console.error('Full error details:', {
+        message: errorMessage,
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        type: typeof error,
+        error: error
+      });
+      
+      // Generic fallback
       return {
         role: 'assistant',
-        content: 'Sorry, I\'m having trouble connecting right now. Please try again.',
+        content: 'Sorry, I encountered an unexpected error. Please try again.',
         confidence: 0.1
       };
     }
