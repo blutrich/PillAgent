@@ -61,6 +61,7 @@ export const createJournalEntryTool = createTool({
         message: 'Journal entry saved successfully! 📝',
         entry_id: data.id,
         saved_at: data.created_at,
+        ui_notice: '{adding to journal}', // Visual notice for UI
         summary: {
           content_length: content.length,
           mood: mood || 'not specified',
