@@ -26,12 +26,14 @@ export const createJournalEntryTool = createTool({
   id: 'create_journal_entry',
   description: 'Save a journal entry with mood, energy level, and tags. All entries are permanently stored and can be queried later.',
   inputSchema: JournalEntrySchema,
-  execute: async ({ context }) => {
+  execute: async ({ context, resourceId }) => {
     const { content, mood, energy_level, tags, climbing_related } = context;
     
     try {
-      // Get user ID from context (this should be passed from the agent)
-      const userId = context.userId || 'anonymous'; // Fallback for testing
+      // Use resourceId from the tool execution context (this is the user ID from the API call)
+      const userId = resourceId || 'anonymous';
+      
+      console.log('Creating journal entry for user:', userId);
       
       // Create journal entry in Supabase
       const { data, error } = await supabase
@@ -87,12 +89,12 @@ export const queryJournalTool = createTool({
   id: 'query_journal',
   description: 'Search and retrieve journal entries based on content, date range, mood, tags, or climbing focus. All your journal data persists forever.',
   inputSchema: JournalQuerySchema,
-  execute: async ({ context }) => {
+  execute: async ({ context, resourceId }) => {
     const { query, date_range, mood_filter, tags_filter, climbing_only } = context;
     
     try {
-      // Get user ID from context
-      const userId = context.userId || 'anonymous';
+      // Use resourceId from the tool execution context (this is the user ID from the API call)
+      const userId = resourceId || 'anonymous';
       
       // Build the query
       let supabaseQuery = supabase
@@ -225,11 +227,12 @@ export const getJournalStatsTool = createTool({
     time_period: z.enum(['week', 'month', 'quarter', 'year', 'all']).optional().describe('Time period for statistics (optional)'),
     userId: z.string().optional().describe('User ID (automatically provided by agent)')
   }),
-  execute: async ({ context }) => {
+  execute: async ({ context, resourceId }) => {
     const { time_period = 'month' } = context;
     
     try {
-      const userId = context.userId || 'anonymous';
+      // Use resourceId from the tool execution context (this is the user ID from the API call)
+      const userId = resourceId || 'anonymous';
       
       // Build date filter
       let startDate: Date;
