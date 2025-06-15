@@ -16,6 +16,11 @@ import {
   onboardingAnalyticsTool 
 } from '../tools/onboarding-tool';
 import { retentionAnalysisTool } from '../tools/retention-tool';
+import { 
+  createJournalEntryTool, 
+  queryJournalTool, 
+  getJournalStatsTool 
+} from '../tools/journal-tool';
 import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow';
 
 const llm = openai('gpt-4o');
@@ -358,7 +363,12 @@ export const climbingAgent = new Agent({
     onboardingAnalytics: onboardingAnalyticsTool,
     
     // Retention and progress tracking
-    retentionAnalysis: retentionAnalysisTool
+    retentionAnalysis: retentionAnalysisTool,
+    
+    // Journal tools
+    createJournalEntry: createJournalEntryTool,
+    queryJournal: queryJournalTool,
+    getJournalStats: getJournalStatsTool
   },
   workflows: {
     simpleRetentionWorkflow
