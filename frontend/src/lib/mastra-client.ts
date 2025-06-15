@@ -1,8 +1,5 @@
 // ClimbingPill AI Coach API functions - Connected to Mastra Backend
-const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://pill_agent.mastra.cloud/api'
-    : 'http://localhost:4111/api');
+const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 'http://localhost:4111/api';
 
 // Import Supabase client for direct database access
 import { supabase } from './supabase';
@@ -34,6 +31,7 @@ export const climbingPillAPI = {
   // Get latest training program directly from Supabase
   async getLatestProgram(userId: string) {
     try {
+      console.log('getLatestProgram: Querying for user:', userId);
       const { data, error } = await supabase
         .from('training_programs')
         .select('*')
@@ -43,10 +41,12 @@ export const climbingPillAPI = {
         .single();
 
       if (error) {
+        console.error('getLatestProgram: Supabase error:', error);
         console.log('No training program found for user:', userId);
         return null;
       }
 
+      console.log('getLatestProgram: Found program:', data);
       return data;
     } catch (error) {
       console.error('Error getting latest program:', error);
@@ -57,6 +57,37 @@ export const climbingPillAPI = {
   // Chat with the AI coach
   async chat(message: string, userId: string, threadId: string = 'main-conversation') {
     try {
+      // Get user's current program and assessment data to provide context
+      console.log('Chat: Getting program and assessment data for user:', userId);
+      const [programData, assessmentData] = await Promise.all([
+        this.getTrainingProgram(userId),
+        this.getLatestAssessment(userId)
+      ]);
+
+      console.log('Chat: Program data retrieved:', programData);
+      console.log('Chat: Assessment data retrieved:', assessmentData);
+
+      // Build context message with user's current program and assessment
+      let contextMessage = message;
+      if (programData?.detailedProgram || assessmentData) {
+        const context = {
+          userMessage: message,
+          currentProgram: programData?.detailedProgram,
+          programName: programData?.name,
+          currentWeek: programData?.currentWeek,
+          assessmentData: assessmentData ? {
+            predictedGrade: assessmentData.predicted_grade,
+            compositeScore: assessmentData.composite_score,
+            currentGrade: assessmentData.current_grade,
+            targetGrade: assessmentData.target_grade
+          } : null
+        };
+        contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
+        console.log('Chat: Sending context message:', contextMessage);
+      } else {
+        console.log('Chat: No program or assessment data found, sending message without context');
+      }
+
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
         headers: { 
@@ -64,7 +95,7 @@ export const climbingPillAPI = {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          messages: [message],  // API expects Array<string>
+          messages: [contextMessage],  // Include program context with user message
           resourceid: userId,   // API uses lowercase 'resourceid'
           threadId: threadId    // Thread ID for conversation context
         })
@@ -261,16 +292,38 @@ export const climbingPillAPI = {
         timestamp: assessmentData.timestamp as string
       };
 
+      console.log('Making API call to:', `${MASTRA_API_BASE}/agents/climbingPillAgent/generate`);
+      console.log('With payload:', {
+        messages: [`Please conduct a comprehensive ClimbingPill assessment using the climbingAssessment tool with this data: ${JSON.stringify(structuredData)}`],
+        resourceid: structuredData.userId,
+        threadId: `assessment-${structuredData.userId}`
+      });
+
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           messages: [`Please conduct a comprehensive ClimbingPill assessment using the climbingAssessment tool with this data: ${JSON.stringify(structuredData)}`],
           resourceid: structuredData.userId,
           threadId: `assessment-${structuredData.userId}`
         })
       });
-      return await response.json();
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('API Success Response:', result);
+      return result;
     } catch (error) {
       console.error('Error conducting assessment:', error);
       throw error;
@@ -297,37 +350,58 @@ export const climbingPillAPI = {
   // Generate detailed training program
   async generateProgram(assessmentResults: any, userPreferences: any) {
     try {
+      // Convert availableDays from day names to numbers (1=Monday, 7=Sunday)
+      const dayNameToNumber = {
+        'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 
+        'Friday': 5, 'Saturday': 6, 'Sunday': 7
+      };
+      
+      let availableDaysNumbers = [1, 3, 5]; // Default: Mon, Wed, Fri
+      if (Array.isArray(userPreferences.availableDays)) {
+        if (typeof userPreferences.availableDays[0] === 'string') {
+          // Convert day names to numbers
+          availableDaysNumbers = userPreferences.availableDays
+            .map((day: string) => dayNameToNumber[day as keyof typeof dayNameToNumber])
+            .filter((dayNum: number | undefined): dayNum is number => dayNum !== undefined);
+        } else {
+          // Already numbers
+          availableDaysNumbers = userPreferences.availableDays.filter((day: number) => day >= 1 && day <= 7);
+        }
+      }
+
       const programData = {
         userId: userPreferences.userId || 'anonymous',
         assessmentResults: {
-          predictedGrade: assessmentResults.predictedGrade,
-          compositeScore: assessmentResults.compositeScore,
-          weaknesses: [assessmentResults.weakestArea, assessmentResults.secondWeakestArea || 'General'],
-          strongestArea: assessmentResults.strongestArea,
-          weakestArea: assessmentResults.weakestArea,
-          fingerStrengthRatio: assessmentResults.fingerStrengthRatio,
-          pullUpRatio: assessmentResults.pullUpRatio,
-          pushUpRatio: assessmentResults.pushUpRatio,
-          toeToBarRatio: assessmentResults.toeToBarRatio,
-          flexibilityRatio: assessmentResults.flexibilityRatio,
+          predictedGrade: assessmentResults.predictedGrade || 'V6',
+          compositeScore: parseFloat(assessmentResults.compositeScore) || 0.7,
+          weaknesses: [assessmentResults.weakestArea || 'Core Strength', assessmentResults.secondWeakestArea || 'Flexibility'],
+          strongestArea: assessmentResults.strongestArea || 'Finger Strength',
+          weakestArea: assessmentResults.weakestArea || 'Core Strength',
+          fingerStrengthRatio: parseFloat(assessmentResults.fingerStrengthRatio) || 1.2,
+          pullUpRatio: parseFloat(assessmentResults.pullUpRatio) || 0.8,
+          pushUpRatio: parseFloat(assessmentResults.pushUpRatio) || 0.6,
+          toeToBarRatio: parseFloat(assessmentResults.toeToBarRatio) || 0.4,
+          flexibilityRatio: parseFloat(assessmentResults.flexibilityRatio) || 0.9,
         },
         programType: 'optimized' as const,
         userPreferences: {
-          availableDays: userPreferences.availableDays || [1, 2, 3, 4, 5, 6], // Mon-Sat
-          sessionLengthMinutes: userPreferences.sessionLength || 90,
+          availableDays: availableDaysNumbers,
+          sessionLengthMinutes: parseInt(userPreferences.sessionLength) || 90,
           equipmentAccess: userPreferences.equipment || ['fingerboard', 'gym'],
           primaryGoals: userPreferences.goals || ['strength', 'technique'],
           climbingStyle: userPreferences.style || 'bouldering',
           injuryHistory: userPreferences.injuries || [],
         },
         detailedContext: {
-          current80PercentGrade: assessmentResults.eightyPercentGrade || assessmentResults.currentGrade,
-          currentLeadGrade: assessmentResults.leadGrade,
-          fingboardMaxWeight: assessmentResults.addedWeight || 0,
+          current80PercentGrade: assessmentResults.eightyPercentGrade || assessmentResults.currentGrade || 'V5',
+          currentLeadGrade: assessmentResults.leadGrade || undefined,
+          fingboardMaxWeight: parseFloat(assessmentResults.addedWeight) || 0,
           trainingHistory: userPreferences.experience || 'Intermediate',
           climberName: userPreferences.name || 'ClimbingPill User',
         },
       };
+
+      console.log('Sending program generation data:', programData);
 
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
@@ -340,7 +414,9 @@ export const climbingPillAPI = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Program generation API error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const result = await response.json();
@@ -348,6 +424,44 @@ export const climbingPillAPI = {
       return result;
     } catch (error) {
       console.error('Error generating program:', error);
+      throw error;
+    }
+  },
+
+  // Save training program to database
+  async saveTrainingProgram(programData: any, userId: string, assessmentId?: string) {
+    try {
+      const { data, error } = await supabase
+        .from('training_programs')
+        .insert({
+          user_id: userId,
+          assessment_id: assessmentId,
+          program_name: programData.name || 'ClimbingPill Training Program',
+          duration_weeks: programData.totalWeeks || 6,
+          difficulty_level: 'intermediate',
+          focus_areas: ['strength', 'technique'],
+          target_grade: programData.targetGrade || 'V7',
+          program_data: programData.detailedProgram || programData,
+          status: 'active',
+          progress_percentage: 0,
+          completed_sessions: 0,
+          total_sessions: programData.totalSessions || 18,
+          initial_grade: programData.initialGrade || 'V6',
+          current_grade: programData.initialGrade || 'V6',
+          grade_improvements: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving training program:', error);
+        throw error;
+      }
+
+      console.log('Training program saved successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error saving training program:', error);
       throw error;
     }
   },

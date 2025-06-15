@@ -123,7 +123,7 @@ USER DATA:
 
 Generate a complete 6-week program following all rules above. Focus on the user's specific goals and limitations.
 
-EXAMPLE OUTPUT:
+CRITICAL: Use EXACTLY this format for consistent parsing:
 
 WEEK 1 - Base Building
 
@@ -133,20 +133,15 @@ Warm-up:
 - Volume: 10 problems, 15min
 
 Main Session:
-- Type: Fingerboard
-- Target: 100% max weight
-- Volume: 3 sets × 10s hangs
-- Rest: 3min between sets
-
-- Type: Boulder Projects  
-- Target: V6
-- Volume: 3 problems × 20min each
-- Rest: Full recovery between attempts
+- Type: Fingerboard + Boulder Projects
+- Target: 100% max weight fingerboard, V6 projects
+- Volume: FB 3 sets × 10s hangs, 3 boulder problems × 20min each
+- Rest: 3min between FB sets, full recovery between projects
 
 Modifications:
-- RPE: 8-10 for projects
-- Alternatives: If no FB, use gym holds for max hangs
-- Progression: Next week increase FB to 102%
+- RPE: 8-10 for projects, 9-10 for fingerboard
+- Alternatives: If no fingerboard, use gym holds for max hangs
+- Progression: Next week increase fingerboard to 102%
 
 Wednesday  
 Warm-up:
@@ -154,22 +149,25 @@ Warm-up:
 - Volume: 10 problems, 10min
 
 Main Session:
-- Type: General Fitness
-- Target: Upper body focus
-- Volume: Pull-ups 3×10, Push-ups 3×15, Core 3×12
-- Rest: 2min between exercises
-
-- Type: Flash Training
-- Target: V4  
-- Volume: 8-10 problems, 60min total
-- Rest: 2min between problems
+- Type: Flash Training + General Fitness
+- Target: V4 flash grade, upper body strength
+- Volume: 8-10 flash problems (60min), Pull-ups 3×10, Push-ups 3×15, Core 3×12
+- Rest: 2min between problems, 2min between strength exercises
 
 Modifications:
-- RPE: 6-7 for flash
-- Alternatives: If elbow pain, reduce pull-up volume
-- Progression: Aim for higher success rate
+- RPE: 6-7 for flash, 7-8 for strength
+- Alternatives: If elbow pain, reduce pull-up volume by 30%
+- Progression: Aim for 80%+ success rate on flash attempts
 
-Continue this format for all 6 weeks...`;
+FORMATTING RULES:
+1. Start each week with "WEEK [number] - [focus]"
+2. Each day starts with day name (Monday, Tuesday, etc.)
+3. Always include Warm-up, Main Session, and Modifications sections
+4. Use specific V-grades, exact rep counts, and precise durations
+5. Include RPE levels and progression notes
+6. Make each session detailed and unique
+
+Generate ALL 6 weeks following this exact structure. Be specific and detailed for each session.`;
 
 interface ProgramGenerationResult {
   programId: string;
@@ -325,6 +323,11 @@ export const programGenerationTool = createTool({
         temperature: 0.2, // Lower temperature for more consistent, structured output
       });
 
+      // Log the AI response for debugging
+      console.log('=== AI RESPONSE START ===');
+      console.log(text);
+      console.log('=== AI RESPONSE END ===');
+
       // Parse the response into our structured format
       const programData = parseAIResponseToStructure(text, userPreferences.availableDays.length);
 
@@ -426,6 +429,7 @@ function calculateGradeNumber(gradeString: string): number {
 
 function parseAIResponseToStructure(aiResponse: string, availableDays: number): any {
   console.log('Parsing AI response for program structure...');
+  console.log('AI Response length:', aiResponse.length);
   
   // Try to parse JSON if the response contains structured data
   try {
@@ -438,7 +442,18 @@ function parseAIResponseToStructure(aiResponse: string, availableDays: number): 
       }
     }
   } catch (e) {
-    console.log('AI response is not JSON, using fallback structure generation');
+    console.log('AI response is not JSON, parsing text format...');
+  }
+  
+  // Enhanced text parsing for the detailed AI response
+  try {
+    const weeks = parseDetailedTextResponse(aiResponse);
+    if (weeks.length > 0) {
+      console.log(`Successfully parsed ${weeks.length} weeks from AI text response`);
+      return { weeks };
+    }
+  } catch (e) {
+    console.log('Failed to parse AI text response:', e);
   }
   
   // Fallback: Generate structured program regardless of AI response format
@@ -453,8 +468,184 @@ function parseAIResponseToStructure(aiResponse: string, availableDays: number): 
     weeks.push(week);
   }
   
-  console.log(`Generated ${weeks.length} weeks with structured data`);
+  console.log(`Generated ${weeks.length} weeks with fallback structured data`);
   return { weeks };
+}
+
+function parseDetailedTextResponse(aiResponse: string): any[] {
+  const weeks: any[] = [];
+  
+  // Split response into week sections using regex
+  const weekPattern = /WEEK\s+(\d+)\s*-\s*([^\n]+)/gi;
+  const matches = [...aiResponse.matchAll(weekPattern)];
+  
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const weekNumber = parseInt(match[1]);
+    const weekFocus = match[2]?.trim() || 'Training Focus';
+    
+    // Get content between this week and the next week (or end of string)
+    const startIndex = match.index! + match[0].length;
+    const nextMatch = matches[i + 1];
+    const endIndex = nextMatch ? nextMatch.index! : aiResponse.length;
+    const weekContent = aiResponse.substring(startIndex, endIndex);
+    
+    if (!weekNumber || weekNumber > 6) continue;
+    
+    const days = parseDaysFromWeekContent(weekContent);
+    
+    if (days.length > 0) {
+      weeks.push({
+        weekNumber,
+        focus: weekFocus,
+        days
+      });
+    }
+  }
+  
+  return weeks;
+}
+
+function parseDaysFromWeekContent(weekContent: string): any[] {
+  const days: any[] = [];
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  
+  // Find all day occurrences with their positions
+  const dayPattern = new RegExp(`^(${dayNames.join('|')})\\s*$`, 'gmi');
+  const dayMatches = [...weekContent.matchAll(dayPattern)];
+  
+  for (let i = 0; i < dayMatches.length; i++) {
+    const match = dayMatches[i];
+    const dayName = match[1]?.trim();
+    
+    if (!dayName) continue;
+    
+    // Get content between this day and the next day (or end of week)
+    const startIndex = match.index! + match[0].length;
+    const nextMatch = dayMatches[i + 1];
+    const endIndex = nextMatch ? nextMatch.index! : weekContent.length;
+    const dayContent = weekContent.substring(startIndex, endIndex);
+    
+    const sessions = parseSessionsFromDayContent(dayContent);
+    
+    if (sessions.length > 0) {
+      days.push({
+        day: dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase(),
+        sessions
+      });
+    }
+  }
+  
+  return days;
+}
+
+function parseSessionsFromDayContent(dayContent: string): any[] {
+  const sessions: any[] = [];
+  
+  // Look for session structure: Warm-up, Main Session, etc.
+  const warmupMatch = dayContent.match(/Warm-up:([\s\S]*?)(?=Main Session:|$)/i);
+  const mainSessionMatch = dayContent.match(/Main Session:([\s\S]*?)(?=Modifications:|$)/i);
+  const modificationsMatch = dayContent.match(/Modifications:([\s\S]*?)(?=\n\n|\n[A-Z]|$)/i);
+  
+  if (mainSessionMatch) {
+    const mainContent = mainSessionMatch[1];
+    
+    // Extract session type
+    const typeMatch = mainContent.match(/Type:\s*([^\n]+)/i);
+    const sessionType = typeMatch ? typeMatch[1].trim() : 'Training Session';
+    
+    // Extract target/exercises
+    const targetMatch = mainContent.match(/Target:\s*([^\n]+)/i);
+    const volumeMatch = mainContent.match(/Volume:\s*([^\n]+)/i);
+    const restMatch = mainContent.match(/Rest:\s*([^\n]+)/i);
+    
+    const exercises: string[] = [];
+    
+    // Add warm-up if present
+    if (warmupMatch) {
+      const warmupContent = warmupMatch[1].trim();
+      const gradeMatch = warmupContent.match(/Grade:\s*([^\n]+)/i);
+      const volumeWarmupMatch = warmupContent.match(/Volume:\s*([^\n]+)/i);
+      
+      if (gradeMatch && volumeWarmupMatch) {
+        exercises.push(`Warm-up: ${gradeMatch[1]} - ${volumeWarmupMatch[1]}`);
+      }
+    }
+    
+    // Add main session details
+    if (targetMatch) exercises.push(`Target: ${targetMatch[1]}`);
+    if (volumeMatch) exercises.push(`Volume: ${volumeMatch[1]}`);
+    if (restMatch) exercises.push(`Rest: ${restMatch[1]}`);
+    
+    // Extract additional exercises from the main content
+    const exerciseLines = mainContent.split('\n')
+      .filter(line => line.trim() && !line.match(/^(Type|Target|Volume|Rest):/i))
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    exercises.push(...exerciseLines);
+    
+    // Extract RPE from modifications
+    let intensity = 'Moderate';
+    let notes = '';
+    
+    if (modificationsMatch) {
+      const modContent = modificationsMatch[1];
+      const rpeMatch = modContent.match(/RPE:\s*([^\n]+)/i);
+      const alternativesMatch = modContent.match(/Alternatives:\s*([^\n]+)/i);
+      const progressionMatch = modContent.match(/Progression:\s*([^\n]+)/i);
+      
+      if (rpeMatch) intensity = `RPE ${rpeMatch[1].trim()}`;
+      
+      const notesParts = [];
+      if (alternativesMatch) notesParts.push(`Alternatives: ${alternativesMatch[1]}`);
+      if (progressionMatch) notesParts.push(`Progression: ${progressionMatch[1]}`);
+      notes = notesParts.join(' | ');
+    }
+    
+    // Extract duration from volume or estimate
+    let duration = 90;
+    if (volumeMatch) {
+      const volumeText = volumeMatch[1].toLowerCase();
+      if (volumeText.includes('min')) {
+        const durationMatch = volumeText.match(/(\d+)\s*min/);
+        if (durationMatch) {
+          duration = parseInt(durationMatch[1]);
+        }
+      }
+    }
+    
+    // Adjust duration based on session type
+    if (sessionType.toLowerCase().includes('rest')) duration = Math.min(duration, 30);
+    else if (sessionType.toLowerCase().includes('deload')) duration = Math.min(duration, 60);
+    else if (sessionType.toLowerCase().includes('assessment')) duration = Math.min(duration, 45);
+    
+    sessions.push({
+      type: sessionType,
+      exercises: exercises.length > 0 ? exercises : [`${sessionType} session`],
+      duration,
+      intensity,
+      notes: notes || `Focus on ${sessionType.toLowerCase()} with proper form and recovery`
+    });
+  }
+  
+  // If no structured content found but there's content, create a basic session
+  if (sessions.length === 0 && dayContent.trim().length > 10) {
+    // Try to extract any meaningful content
+    const lines = dayContent.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.match(/^(warm-up|main session|modifications):/i));
+    
+    sessions.push({
+      type: 'Training Session',
+      exercises: lines.length > 0 ? lines.slice(0, 5) : ['Custom training session based on AI recommendations'],
+      duration: 90,
+      intensity: 'Moderate',
+      notes: dayContent.trim().substring(0, 200) + (dayContent.length > 200 ? '...' : '')
+    });
+  }
+  
+  return sessions;
 }
 
 function generateWeekDays(availableDays: number, weekNumber: number): any[] {

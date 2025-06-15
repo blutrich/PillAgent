@@ -1,0 +1,14 @@
+<svg viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pink circle -->
+  <circle cx="120" cy="80" r="60" fill="#ff4d6d"/>
+  
+  <!-- Lime green circle -->
+  <circle cx="180" cy="80" r="60" fill="#a3d977"/>
+  
+  <!-- Teal rounded rectangle base -->
+  <rect x="60" y="120" width="180" height="120" rx="60" ry="60" fill="#2d9596"/>
+  
+  <!-- Text "ClimbingPill" -->
+  <text x="280" y="180" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="#2d9596">Climbing</text>
+  <text x="800" y="180" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="#ff4d6d">Pill</text>
+</svg> 
