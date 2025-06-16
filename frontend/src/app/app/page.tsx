@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, memo } from 'react'
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useAuth } from '../../lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { climbingPillAPI } from '../../lib/mastra-client'
@@ -1132,6 +1132,12 @@ const ClimbingPillApp = () => {
   // AI Chat Component - Memoized to prevent re-renders
   const AIChat = memo(function AIChat() {
     const [localInputMessage, setLocalInputMessage] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    
+    // Auto-scroll to bottom when messages change
+    useEffect(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isTyping]);
     
     const handleLocalInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       setLocalInputMessage(e.target.value);
@@ -1230,6 +1236,8 @@ const ClimbingPillApp = () => {
                   </div>
                 </div>
               )}
+              {/* Invisible element to scroll to */}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input - Mobile Optimized */}
