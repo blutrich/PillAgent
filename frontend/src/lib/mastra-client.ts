@@ -430,6 +430,73 @@ export const climbingPillAPI = {
       console.error('Error conducting assessment:', error);
       throw error;
     }
+  },
+
+  // Generate training program
+  async generateProgram(programData: Record<string, unknown>) {
+    try {
+      console.log('Generating program with preferences:', programData);
+
+      const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: [`Please generate a comprehensive ClimbingPill training program using the programGeneration tool with this data: ${JSON.stringify(programData)}`],
+          resourceid: programData.userId as string,
+          threadId: `program-${programData.userId}`
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Program generation API error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('Program generation success:', result);
+      return result;
+    } catch (error) {
+      console.error('Error generating program:', error);
+      throw error;
+    }
+  },
+
+  // Save training program to database
+  async saveTrainingProgram(programData: Record<string, unknown>, userId: string) {
+    try {
+      console.log('Saving training program:', programData);
+
+      // Save program data to Supabase via the agent
+      const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: [`Please save this training program to the database: ${JSON.stringify(programData)}`],
+          resourceid: userId,
+          threadId: `save-program-${userId}`
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Save program API error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('Program saved successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error saving program:', error);
+      throw error;
+    }
   }
 };
 
