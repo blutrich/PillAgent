@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Force cache busting for JavaScript files to ensure latest fixes are deployed
   generateBuildId: async () => {
-    return `build-${Date.now()}`;
+    return `build-api-fix-${Date.now()}`;
   },
   
   // Add cache-control headers to prevent aggressive caching of JS files

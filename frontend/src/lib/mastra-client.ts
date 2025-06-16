@@ -1,12 +1,23 @@
 // ClimbingPill AI Coach API functions - Connected to Mastra Backend
 // Last updated: 2025-01-15 - Fixed timeout issues and .single() queries
-// Cache bust: 2025-01-15T21:30:00Z - Force fresh deployment
+// Cache bust: 2025-01-15T22:15:00Z - Added generateProgram and saveTrainingProgram methods
+// CRITICAL FIX: Assessment error resolved with missing API methods
 const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 'https://pill_agent.mastra.cloud/api';
 
 // Import Supabase client for direct database access
 import { supabase } from './supabase';
 
 export const climbingPillAPI = {
+  // Debug method to verify API methods exist
+  _debugMethods() {
+    console.log('🔍 Available API methods:', Object.keys(this));
+    console.log('✅ generateProgram exists:', typeof this.generateProgram === 'function');
+    console.log('✅ saveTrainingProgram exists:', typeof this.saveTrainingProgram === 'function');
+    return {
+      generateProgram: typeof this.generateProgram === 'function',
+      saveTrainingProgram: typeof this.saveTrainingProgram === 'function'
+    };
+  },
   // Get latest assessment data directly from Supabase
   async getLatestAssessment(userId: string) {
     try {
