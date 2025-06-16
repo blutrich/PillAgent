@@ -123,20 +123,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      console.log('Attempting to sign out...')
-      const result = await auth.signOut()
-      console.log('SignOut result:', result)
+      console.log('🚪 Attempting to sign out...')
       
-      if (!result.error) {
-        setUser(null)
-        setUserProfile(null)
-        console.log('Successfully signed out')
+      // Clear local state immediately for better UX
+      setUser(null)
+      setUserProfile(null)
+      
+      const result = await auth.signOut()
+      console.log('🚪 SignOut result:', result)
+      
+      if (result.error) {
+        console.error('🚪 SignOut error:', result.error)
       } else {
-        console.error('SignOut error:', result.error)
+        console.log('🚪 Successfully signed out')
+        
+        // Force a page reload to clear any cached state
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
       }
+      
       return result
     } catch (error) {
-      console.error('SignOut exception:', error)
+      console.error('🚪 SignOut exception:', error)
+      
+      // Even if there's an error, clear local state and redirect
+      setUser(null)
+      setUserProfile(null)
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+      
       return { error }
     }
   }
