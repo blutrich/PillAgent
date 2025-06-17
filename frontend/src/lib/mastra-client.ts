@@ -65,8 +65,8 @@ export const climbingPillAPI = {
             .limit(1)
             .maybeSingle(); // Use maybeSingle for better performance when expecting 0 or 1 result
           
-          // Increased timeout and exponential backoff
-          const timeoutDuration = 15000 + (retryCount * 5000); // 15s, 20s, 25s
+          // Increased timeout for EU-North region latency
+          const timeoutDuration = 45000 + (retryCount * 10000); // 45s, 55s, 65s
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Query timeout')), timeoutDuration)
           );
