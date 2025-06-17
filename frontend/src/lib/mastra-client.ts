@@ -50,9 +50,10 @@ export const climbingPillAPI = {
     try {
       console.log('getLatestProgram: Querying for user:', userId);
       
-      // Add retry logic for better reliability
+      // Add fast-fail for chat context (don't block chat with long timeouts)
+      const isChatContext = new Error().stack?.includes('chat');
+      const maxRetries = isChatContext ? 1 : 3; // Only 1 attempt for chat context
       let retryCount = 0;
-      const maxRetries = 3;
       
       while (retryCount < maxRetries) {
         try {
@@ -65,8 +66,8 @@ export const climbingPillAPI = {
             .limit(1)
             .maybeSingle(); // Use maybeSingle for better performance when expecting 0 or 1 result
           
-          // Increased timeout for EU-North region latency
-          const timeoutDuration = 45000 + (retryCount * 10000); // 45s, 55s, 65s
+          // Much shorter timeout for chat context to avoid blocking
+          const timeoutDuration = isChatContext ? 5000 : (45000 + (retryCount * 10000)); // 5s for chat, 45s/55s/65s for normal
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Query timeout')), timeoutDuration)
           );
@@ -143,7 +144,7 @@ export const climbingPillAPI = {
         
         // Race against timeout - if context takes too long, skip it
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Context timeout')), 8000) // Increased to 8 seconds
+          setTimeout(() => reject(new Error('Context timeout')), 6000) // 6 seconds max for chat context
         );
         
         const [programData, assessmentData] = await Promise.race([
@@ -187,7 +188,11 @@ export const climbingPillAPI = {
           console.log('Chat: Context includes detailed program?', !!context.currentProgram);
         } else {
           console.log('Chat: No program or assessment data found, instructing agent to use tools');
-          contextMessage = `User question: "${message}"\n\nIMPORTANT: No program context loaded. Please use available tools (getUserProfile, queryJournal) to access the user's current training program and assessment data before responding.`;
+          contextMessage = `User question: "${message}"\n\nIMPORTANT: No program context loaded due to database timeout. Please use your available tools to access the user's current training program and assessment data:
+          - Use queryJournal tool to check training history
+          - Use getUserProfile tool to get user preferences
+          - Use climbingAssessment tool if needed for current metrics
+          Then provide a personalized response based on that data.`;
         }
       } catch (error) {
         console.warn('Chat: Context fetching failed or timed out, continuing without context:', error instanceof Error ? error.message : String(error));
