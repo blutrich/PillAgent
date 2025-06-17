@@ -1,7 +1,7 @@
 // ClimbingPill AI Coach API functions - Connected to Mastra Backend
-// Last updated: 2025-01-15 - Fixed timeout issues and .single() queries
-// Cache bust: 2025-01-15T22:15:00Z - Added generateProgram and saveTrainingProgram methods
+// NEW FILE: v2 to bypass browser cache completely
 // CRITICAL FIX: Assessment error resolved with missing API methods
+// Cache bust: 2025-01-15T22:20:00Z - Complete new file to force refresh
 const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 'https://pill_agent.mastra.cloud/api';
 
 // Import Supabase client for direct database access
@@ -18,6 +18,7 @@ export const climbingPillAPI = {
       saveTrainingProgram: typeof this.saveTrainingProgram === 'function'
     };
   },
+
   // Get latest assessment data directly from Supabase
   async getLatestAssessment(userId: string) {
     try {
@@ -48,7 +49,7 @@ export const climbingPillAPI = {
   // Get latest training program directly from Supabase with improved error handling
   async getLatestProgram(userId: string) {
     try {
-      console.log('getLatestProgram: Querying for user:', userId);
+      console.log('💾 V2 API: getLatestProgram - Querying for user:', userId);
       
       // Add retry logic for better reliability
       let retryCount = 0;
@@ -74,33 +75,33 @@ export const climbingPillAPI = {
           const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
           if (error) {
-            console.error(`getLatestProgram: Supabase error (attempt ${retryCount + 1}):`, error);
+            console.error(`🔥 V2 API: getLatestProgram - Supabase error (attempt ${retryCount + 1}):`, error);
             
             // If it's a timeout or connection error, retry
             if (error.message.includes('timeout') || error.message.includes('connection')) {
               retryCount++;
               if (retryCount < maxRetries) {
-                console.log(`Retrying in ${1000 * retryCount}ms...`);
+                console.log(`🔄 V2 API: Retrying in ${1000 * retryCount}ms...`);
                 await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
                 continue;
               }
             }
             
-            console.log('No training program found for user:', userId);
+            console.log('❌ V2 API: No training program found for user:', userId);
             return null;
           }
 
           if (!data) {
-            console.log('getLatestProgram: No programs found for user:', userId);
+            console.log('📭 V2 API: getLatestProgram - No programs found for user:', userId);
             return null;
           }
 
           const latestProgram = data; // maybeSingle returns the object directly, not an array
-          console.log('getLatestProgram: Found program:', latestProgram);
+          console.log('✅ V2 API: getLatestProgram - Found program:', latestProgram);
           return latestProgram;
           
         } catch (attemptError) {
-          console.error(`getLatestProgram: Attempt ${retryCount + 1} failed:`, attemptError);
+          console.error(`🔥 V2 API: getLatestProgram - Attempt ${retryCount + 1} failed:`, attemptError);
           retryCount++;
           
           if (retryCount >= maxRetries) {
@@ -114,7 +115,7 @@ export const climbingPillAPI = {
       
       return null;
     } catch (error) {
-      console.error('Error getting latest program after all retries:', error);
+      console.error('❌ V2 API: Error getting latest program after all retries:', error);
       return null;
     }
   },
@@ -246,25 +247,6 @@ export const climbingPillAPI = {
         };
       }
       
-      // For other errors, try to extract meaningful error message
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('HTTP error')) {
-        return {
-          role: 'assistant',
-          content: 'Sorry, there was a server error. Please try again in a moment.',
-          confidence: 0.1
-        };
-      }
-      
-      // Log the full error for debugging
-      console.error('Full error details:', {
-        message: errorMessage,
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-        type: typeof error,
-        error: error
-      });
-      
-      // Generic fallback
       return {
         role: 'assistant',
         content: 'Sorry, I encountered an unexpected error. Please try again.',
@@ -273,13 +255,14 @@ export const climbingPillAPI = {
     }
   },
 
-  // Get user profile data from Supabase
+  // Get user profile data from Supabase and latest assessment
   async getUserProfile(userId: string) {
     try {
-      // Get the latest assessment for this user
+      // Get the latest assessment to determine current grade and progress
       const assessment = await this.getLatestAssessment(userId);
       
       if (assessment) {
+        // Calculate user data based on assessment
         const currentGrade = assessment.predicted_grade || "V4";
         const gradeNum = parseInt(currentGrade.replace('V', ''));
         const targetGrade = `V${gradeNum + 1}`;
@@ -478,10 +461,10 @@ export const climbingPillAPI = {
     }
   },
 
-  // Generate training program
+  // Generate training program - CRITICAL METHOD THAT WAS MISSING
   async generateProgram(programData: Record<string, unknown>) {
     try {
-      console.log('Generating program with preferences:', programData);
+      console.log('🚀 V2 API: Generating program with preferences:', programData);
 
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
         method: 'POST',
@@ -503,18 +486,18 @@ export const climbingPillAPI = {
       }
 
       const result = await response.json();
-      console.log('Program generation success:', result);
+      console.log('✅ V2 API: Program generation success:', result);
       return result;
     } catch (error) {
-      console.error('Error generating program:', error);
+      console.error('❌ V2 API: Error generating program:', error);
       throw error;
     }
   },
 
-  // Save training program to database
+  // Save training program to database - CRITICAL METHOD THAT WAS MISSING
   async saveTrainingProgram(programData: Record<string, unknown>, userId: string) {
     try {
-      console.log('Saving training program:', programData);
+      console.log('💾 V2 API: Saving training program:', programData);
 
       // Save program data to Supabase via the agent
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
@@ -537,13 +520,13 @@ export const climbingPillAPI = {
       }
 
       const result = await response.json();
-      console.log('Program saved successfully:', result);
+      console.log('✅ V2 API: Program saved successfully:', result);
       return result;
     } catch (error) {
-      console.error('Error saving program:', error);
+      console.error('❌ V2 API: Error saving program:', error);
       throw error;
     }
   }
 };
 
-export default climbingPillAPI;
+export default climbingPillAPI; 

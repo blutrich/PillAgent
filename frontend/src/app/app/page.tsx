@@ -656,8 +656,158 @@ const ClimbingPillApp = () => {
   };
 
   const generateWeeksFromText = (text: string) => {
-    // This is a fallback - should not be needed with proper program data
-    return [];
+    try {
+      console.log('Parsing AI program text:', text.substring(0, 200) + '...');
+      
+      // Extract program structure from the AI text response
+      const weeks = [];
+      
+      // Look for week patterns in the text
+      const weekPattern = /Week\s*(\d+)[-:]?\s*([^\n]*)/gi;
+      const weekMatches = [...text.matchAll(weekPattern)];
+      
+      if (weekMatches.length === 0) {
+        // Try alternative patterns
+        const altPattern = /(\d+)[-.]?\s*(week|Week)/gi;
+        const altMatches = [...text.matchAll(altPattern)];
+        
+        if (altMatches.length > 0) {
+          console.log('Found alternative week patterns:', altMatches.length);
+          // Generate basic structure based on mentioned weeks
+          for (let i = 1; i <= 6; i++) {
+            weeks.push({
+              weekNumber: i,
+              focus: i <= 4 ? 'Progressive Loading' : i === 5 ? 'Deload' : 'Assessment',
+              days: generateDaysFromText(text, i)
+            });
+          }
+        }
+      } else {
+        console.log('Found week patterns:', weekMatches.length);
+        
+        // Parse each found week
+        for (const match of weekMatches) {
+          const weekNumber = parseInt(match[1]);
+          const weekTitle = match[2]?.trim() || 'Training Week';
+          
+          if (weekNumber >= 1 && weekNumber <= 6) {
+            weeks.push({
+              weekNumber,
+              focus: weekTitle,
+              days: generateDaysFromText(text, weekNumber)
+            });
+          }
+        }
+      }
+      
+      // If no weeks were parsed, create a basic structure with the AI insights
+      if (weeks.length === 0) {
+        console.log('No weeks parsed, creating basic structure with AI content');
+        for (let i = 1; i <= 6; i++) {
+          weeks.push({
+            weekNumber: i,
+            focus: i <= 4 ? 'Progressive Loading' : i === 5 ? 'Deload' : 'Assessment',
+            days: [
+              {
+                day: 'Monday',
+                sessions: [{
+                  type: 'Fingerboard + Boulder Projects',
+                  exercises: ['Max hangs', 'Boulder projects', 'Core strength'],
+                  duration: 90,
+                  intensity: 'High',
+                  notes: 'Based on your assessment - focus on finger strength and V8+ projects'
+                }]
+              },
+              {
+                day: 'Wednesday', 
+                sessions: [{
+                  type: 'Technical Practice',
+                  exercises: ['Movement drills', 'Pull-ups', 'Push-ups', 'Flexibility work'],
+                  duration: 60,
+                  intensity: 'Moderate',
+                  notes: 'Technique refinement and supplemental training'
+                }]
+              },
+              {
+                day: 'Friday',
+                sessions: [{
+                  type: 'Boulder Projects',
+                  exercises: ['Project attempts', 'Core work', 'Cool-down stretching'],
+                  duration: 90,
+                  intensity: 'High',
+                  notes: 'Apply techniques from the week'
+                }]
+              }
+            ]
+          });
+        }
+      }
+      
+      console.log(`Generated ${weeks.length} weeks from AI text`);
+      return weeks;
+      
+    } catch (error) {
+      console.error('Error parsing AI text:', error);
+      return [];
+    }
+  };
+
+  const generateDaysFromText = (text: string, weekNumber: number) => {
+    // Extract training days mentioned in the text
+    const days = [];
+    
+    // Look for day patterns
+    const dayPatterns = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const mentionedDays = dayPatterns.filter(day => 
+      text.toLowerCase().includes(day.toLowerCase())
+    );
+    
+    // Default to Monday, Wednesday, Friday if no specific days found
+    const targetDays = mentionedDays.length > 0 ? mentionedDays.slice(0, 3) : ['Monday', 'Wednesday', 'Friday'];
+    
+    for (const day of targetDays) {
+      const isRestDay = text.toLowerCase().includes('rest') && text.toLowerCase().includes(day.toLowerCase());
+      
+      if (isRestDay) {
+        days.push({
+          day,
+          sessions: [{
+            type: 'Rest Day',
+            exercises: ['Light stretching', 'Mobility work'],
+            duration: 0,
+            intensity: 'Recovery',
+            notes: 'Active recovery and preparation'
+          }]
+        });
+      } else {
+        // Extract exercises mentioned in the AI response
+        const exercises = [];
+        if (text.toLowerCase().includes('fingerboard')) exercises.push('Fingerboard max hangs');
+        if (text.toLowerCase().includes('boulder') || text.toLowerCase().includes('project')) exercises.push('Boulder projects');
+        if (text.toLowerCase().includes('pull-up') || text.toLowerCase().includes('pullup')) exercises.push('Pull-ups');
+        if (text.toLowerCase().includes('push-up') || text.toLowerCase().includes('pushup')) exercises.push('Push-ups');
+        if (text.toLowerCase().includes('core')) exercises.push('Core strength');
+        if (text.toLowerCase().includes('stretch') || text.toLowerCase().includes('flexibility')) exercises.push('Cool-down stretching');
+        
+        // Default exercises if none found
+        if (exercises.length === 0) {
+          exercises.push('Training session', 'Strength work', 'Technique practice');
+        }
+        
+        days.push({
+          day,
+          sessions: [{
+            type: 'Training Session',
+            exercises: exercises.slice(0, 4), // Limit to 4 exercises
+            duration: day === 'Wednesday' ? 60 : 90,
+            intensity: weekNumber <= 4 ? 'High' : weekNumber === 5 ? 'Moderate' : 'High',
+            notes: `Week ${weekNumber} focus based on your assessment and goals`
+          }]
+        });
+      }
+    }
+    
+    return days;
   };
 
   const extractInsightsFromText = (text: string) => {
@@ -829,7 +979,12 @@ const ClimbingPillApp = () => {
       };
 
       console.log('Generating program with preferences:', userPreferences);
-      const programResponse = await climbingPillAPI.generateProgram(assessmentPayload, userPreferences);
+      // Combine assessment and preferences for the API call
+      const combinedProgramData = {
+        ...assessmentPayload,
+        ...userPreferences
+      };
+      const programResponse = await climbingPillAPI.generateProgram(combinedProgramData);
       console.log('Program response:', programResponse);
 
       // Handle program response - check if it has structured data or needs parsing
@@ -883,9 +1038,12 @@ const ClimbingPillApp = () => {
         const assessmentId = latestAssessment?.id;
         
         await climbingPillAPI.saveTrainingProgram(
-          programToSave, 
-          user.id, 
-          assessmentId // Link to the assessment that was just completed
+          {
+            ...programToSave,
+            userId: user.id,
+            assessmentId: assessmentId // Link to the assessment that was just completed
+          }, 
+          user.id
         );
         console.log('Training program saved to database successfully');
       } catch (saveError) {

@@ -1,0 +1,1 @@
+import { climbingPillAPI } from '@/lib/mastra-client-v2'; 
