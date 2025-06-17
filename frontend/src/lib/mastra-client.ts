@@ -143,7 +143,7 @@ export const climbingPillAPI = {
         
         // Race against timeout - if context takes too long, skip it
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Context timeout')), 3000)
+          setTimeout(() => reject(new Error('Context timeout')), 8000) // Increased to 8 seconds
         );
         
         const [programData, assessmentData] = await Promise.race([
@@ -153,25 +153,41 @@ export const climbingPillAPI = {
 
         console.log('Chat: Program data retrieved:', programData);
         console.log('Chat: Assessment data retrieved:', assessmentData);
+        console.log('Chat: Program has detailedProgram?', !!programData?.detailedProgram);
+        console.log('Chat: Program structure:', programData ? Object.keys(programData) : 'null');
 
         // Build context message with user's current program and assessment
-        if (programData?.detailedProgram || assessmentData) {
+        if (programData?.detailedProgram || programData?.name || assessmentData) {
           const context = {
             userMessage: message,
             currentProgram: programData?.detailedProgram,
             programName: programData?.name,
             currentWeek: programData?.currentWeek,
+            totalWeeks: programData?.totalWeeks,
+            nextSession: programData?.nextSession,
+            programProgress: programData?.programProgress,
             assessmentData: assessmentData ? {
               predictedGrade: assessmentData.predicted_grade,
               compositeScore: assessmentData.composite_score,
               currentGrade: assessmentData.current_grade,
               targetGrade: assessmentData.target_grade
+            } : null,
+            // Add fallback program info if detailed program isn't available
+            programSummary: programData ? {
+              hasProgram: true,
+              name: programData.name,
+              currentWeek: programData.currentWeek,
+              totalWeeks: programData.totalWeeks,
+              nextSession: programData.nextSession
             } : null
           };
-          contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
-          console.log('Chat: Sending context message:', contextMessage);
+          contextMessage = `User question: "${message}"\n\nUser Context:\n${JSON.stringify(context, null, 2)}`;
+          console.log('Chat: Sending context message with program data');
+          console.log('Chat: Context includes program?', !!context.programSummary?.hasProgram);
+          console.log('Chat: Context includes detailed program?', !!context.currentProgram);
         } else {
-          console.log('Chat: No program or assessment data found, sending message without context');
+          console.log('Chat: No program or assessment data found, instructing agent to use tools');
+          contextMessage = `User question: "${message}"\n\nIMPORTANT: No program context loaded. Please use available tools (getUserProfile, queryJournal) to access the user's current training program and assessment data before responding.`;
         }
       } catch (error) {
         console.warn('Chat: Context fetching failed or timed out, continuing without context:', error instanceof Error ? error.message : String(error));
