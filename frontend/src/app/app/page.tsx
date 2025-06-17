@@ -984,36 +984,47 @@ const ClimbingPillApp = () => {
         ...assessmentPayload,
         ...userPreferences
       };
+      
+      console.log('Calling generateProgram API with combined data...');
       const programResponse = await climbingPillAPI.generateProgram(combinedProgramData);
-      console.log('Program response:', programResponse);
+      console.log('Program response received:', programResponse);
 
       // Handle program response - check if it has structured data or needs parsing
       let programData;
+      console.log('Processing program response...');
+      
       if (programResponse && typeof programResponse === 'object') {
         if (programResponse.weeks) {
-          // Already structured
+          console.log('Program response has structured weeks data');
           programData = programResponse;
         } else if (programResponse.text || programResponse.content) {
+          console.log('Program response has text content, parsing...');
           // AI response format - try to extract structure
           const responseText = programResponse.text || programResponse.content;
           const weeks = generateWeeksFromText(responseText);
           const insights = extractInsightsFromText(responseText);
           
           if (weeks.length > 0) {
+            console.log(`Successfully parsed ${weeks.length} weeks from AI response`);
             programData = { weeks, aiInsights: insights };
           } else {
+            console.log('Could not parse weeks from AI response, using basic program');
             // Fallback to basic program
             programData = generateBasicProgram();
             programData.aiInsights = insights;
           }
         } else {
+          console.log('Program response has unknown format, using basic program');
           // Unknown format, use basic program
           programData = generateBasicProgram();
         }
       } else {
+        console.log('No valid program response, using basic program');
         // No valid response, use basic program
         programData = generateBasicProgram();
       }
+      
+      console.log('Final program data:', programData);
 
       // Prepare program data for saving
       const programToSave = {
@@ -1031,11 +1042,13 @@ const ClimbingPillApp = () => {
       // Update program data in state
       setProgramData(programToSave);
 
-      // Save program to database
+      // Save program to database (non-blocking)
+      console.log('Attempting to save program to database...');
       try {
         // Get the latest assessment ID for this user
         const latestAssessment = await climbingPillAPI.getLatestAssessment(user.id);
         const assessmentId = latestAssessment?.id;
+        console.log('Retrieved assessment ID:', assessmentId);
         
         await climbingPillAPI.saveTrainingProgram(
           {
@@ -1048,7 +1061,9 @@ const ClimbingPillApp = () => {
         console.log('Training program saved to database successfully');
       } catch (saveError) {
         console.error('Failed to save training program to database:', saveError);
+        console.error('Save error details:', saveError);
         // Continue anyway - the program is still available in the frontend
+        console.log('Continuing with frontend program data despite save error');
       }
 
       // Update user data to show assessment completed
@@ -1057,14 +1072,14 @@ const ClimbingPillApp = () => {
         hasCompletedAssessment: true
       }));
 
-      // Reset generating state
+      // Reset generating state and switch to training view
+      console.log('Assessment and program generation completed successfully');
       setIsGeneratingProgram(false);
-
-      // Switch to training view to show the generated program
       setActiveView('training');
 
     } catch (error) {
       console.error('Error completing assessment:', error);
+      console.error('Error details:', error);
       alert('There was an error processing your assessment. Please try again.');
       setIsGeneratingProgram(false);
     }
