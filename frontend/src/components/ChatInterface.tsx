@@ -456,14 +456,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
     const lowerContent = content.toLowerCase()
     
-    // First check for timer tool responses - look for structured timer data
-    const timerConfigMatch = content.match(/\*\*Timer Configuration:\*\*[\s\S]*?- Type: (interval|simple|max_hang|endurance)[\s\S]*?- (?:Work Time: (\d+) seconds|Duration: (\d+) (?:seconds|minutes))/i)
+    // Check for timer tool responses - look for **Timer Configuration:** format
+    const timerConfigMatch = content.match(/\*\*Timer Configuration:\*\*[\s\S]*?Type:\s*(interval|simple|max_hang|endurance|custom)/i)
     
     if (timerConfigMatch) {
-      const [, timerType, workTime, simpleDuration] = timerConfigMatch
+      const [, timerType] = timerConfigMatch
       
-      if (timerType === 'simple' && simpleDuration) {
-        const duration = simpleDuration.includes('minute') ? parseInt(simpleDuration) * 60 : parseInt(simpleDuration)
+      // Extract timer data from the structured response
+      const workTimeMatch = content.match(/Work Time:\s*(\d+)\s*seconds/i)
+      const restTimeMatch = content.match(/Rest Time:\s*(\d+)\s*seconds/i)
+      const roundsMatch = content.match(/Rounds:\s*(\d+)/i)
+      const durationMatch = content.match(/Duration:\s*(\d+)\s*(?:seconds|minutes)/i)
+      const totalDurationMatch = content.match(/Total Duration:\s*(\d+)\s*minutes/i)
+      
+      if (timerType === 'simple' && durationMatch) {
+        const duration = durationMatch[1].includes('minute') ? parseInt(durationMatch[1]) * 60 : parseInt(durationMatch[1])
         return {
           type: 'timer' as const,
           data: {
@@ -471,28 +478,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
             name: 'Training Timer'
           }
         }
-      } else if (timerType === 'interval' || timerType === 'max_hang' || timerType === 'endurance') {
-        // Extract rest time and rounds from the structured response
-        const restTimeMatch = content.match(/- Rest Time: (\d+) seconds/i)
-        const roundsMatch = content.match(/- Rounds: (\d+)/i)
-        const totalTimeMatch = content.match(/- Total Duration: (\d+) minutes/i)
+      } else if ((timerType === 'interval' || timerType === 'max_hang' || timerType === 'endurance') && workTimeMatch && restTimeMatch && roundsMatch) {
+        const workTime = parseInt(workTimeMatch[1])
+        const restTime = parseInt(restTimeMatch[1])
+        const rounds = parseInt(roundsMatch[1])
+        const totalTime = totalDurationMatch ? parseInt(totalDurationMatch[1]) * 60 : (workTime + restTime) * rounds
         
-        if (workTime && restTimeMatch && roundsMatch) {
-          const restTime = parseInt(restTimeMatch[1])
-          const rounds = parseInt(roundsMatch[1])
-          const totalTime = totalTimeMatch ? parseInt(totalTimeMatch[1]) * 60 : (parseInt(workTime) + restTime) * rounds
-          
-          return {
-            type: 'timer' as const,
-            data: {
-              workTime: parseInt(workTime),
-              restTime,
-              rounds,
-              totalTime,
-              name: `${timerType === 'max_hang' ? 'Max Hang' : timerType === 'endurance' ? 'Endurance' : 'Interval'} Timer`,
-              isMaxHang: timerType === 'max_hang',
-              isEndurance: timerType === 'endurance'
-            }
+        return {
+          type: 'timer' as const,
+          data: {
+            workTime,
+            restTime,
+            rounds,
+            totalTime,
+            name: `${timerType === 'max_hang' ? 'Max Hang' : timerType === 'endurance' ? 'Endurance' : 'Interval'} Timer`,
+            isMaxHang: timerType === 'max_hang',
+            isEndurance: timerType === 'endurance'
           }
         }
       }

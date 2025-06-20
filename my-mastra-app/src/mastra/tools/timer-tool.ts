@@ -1,58 +1,19 @@
 import { z } from 'zod';
 import { createTool } from '@mastra/core/tools';
 
-// Timer types
-const TimerType = z.enum(['simple', 'interval', 'max_hang', 'endurance', 'custom']);
-
-const SimpleTimerSchema = z.object({
-  type: z.literal('simple'),
-  duration: z.number().min(1).max(7200), // 1 second to 2 hours
-  name: z.string().optional().default('Training Timer'),
+// Simplified Timer Configuration Schema
+const TimerConfigSchema = z.object({
+  type: z.enum(['simple', 'interval', 'max_hang', 'endurance', 'custom']).describe('Type of timer to create'),
+  duration: z.number().min(1).max(7200).optional().describe('Duration in seconds for simple timers'),
+  workTime: z.number().min(1).max(3600).optional().describe('Work/hang time in seconds'),
+  restTime: z.number().min(1).max(3600).optional().describe('Rest time in seconds'),
+  rounds: z.number().min(1).max(50).optional().describe('Number of rounds for interval timers'),
+  name: z.string().optional().describe('Custom name for the timer'),
 });
-
-const IntervalTimerSchema = z.object({
-  type: z.literal('interval'),
-  workTime: z.number().min(1).max(3600), // 1 second to 1 hour
-  restTime: z.number().min(1).max(3600),
-  rounds: z.number().min(1).max(50),
-  name: z.string().optional(),
-});
-
-const MaxHangTimerSchema = z.object({
-  type: z.literal('max_hang'),
-  hangTime: z.number().min(5).max(60).default(10), // 5-60 seconds
-  restTime: z.number().min(60).max(600).default(180), // 1-10 minutes
-  rounds: z.number().min(1).max(20).default(6),
-  name: z.string().optional().default('Max Hang Timer'),
-});
-
-const EnduranceTimerSchema = z.object({
-  type: z.literal('endurance'),
-  workTime: z.number().min(30).max(1800), // 30 seconds to 30 minutes
-  restTime: z.number().min(30).max(900), // 30 seconds to 15 minutes
-  rounds: z.number().min(1).max(20),
-  name: z.string().optional().default('Endurance Timer'),
-});
-
-const CustomTimerSchema = z.object({
-  type: z.literal('custom'),
-  workTime: z.number().min(1).max(3600),
-  restTime: z.number().min(1).max(3600),
-  rounds: z.number().min(1).max(100),
-  name: z.string(),
-});
-
-const TimerConfigSchema = z.discriminatedUnion('type', [
-  SimpleTimerSchema,
-  IntervalTimerSchema,
-  MaxHangTimerSchema,
-  EnduranceTimerSchema,
-  CustomTimerSchema,
-]);
 
 // Create Timer Tool
 export const createTimerTool = createTool({
-  id: 'create_timer',
+  id: 'createTimer',
   description: 'Create a training timer for climbing sessions. Supports simple timers, interval training, max hangs, endurance training, and custom configurations.',
   inputSchema: TimerConfigSchema,
   execute: async ({ context }) => {
@@ -64,70 +25,87 @@ export const createTimerTool = createTool({
 
       switch (input.type) {
         case 'simple':
+          const duration = input.duration || 1800; // Default 30 minutes
           timerConfig = {
             type: 'simple',
-            duration: input.duration,
+            duration,
             name: input.name || 'Training Timer',
           };
-          totalTime = input.duration;
-          description = `Simple timer for ${Math.floor(input.duration / 60)}:${(input.duration % 60).toString().padStart(2, '0')}`;
+          totalTime = duration;
+          description = `Simple timer for ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
           break;
 
         case 'interval':
-          const intervalName = input.name || `${input.workTime}s on ${input.restTime}s off × ${input.rounds}`;
+          const workTime = input.workTime || 30;
+          const restTime = input.restTime || 60;
+          const rounds = input.rounds || 6;
+          const intervalName = input.name || `${workTime}s on ${restTime}s off × ${rounds}`;
           timerConfig = {
             type: 'interval',
-            workTime: input.workTime,
-            restTime: input.restTime,
-            rounds: input.rounds,
+            workTime,
+            restTime,
+            rounds,
             name: intervalName,
-            totalTime: (input.workTime + input.restTime) * input.rounds,
+            totalTime: (workTime + restTime) * rounds,
           };
-          totalTime = (input.workTime + input.restTime) * input.rounds;
-          description = `Interval timer: ${input.workTime}s work, ${input.restTime}s rest, ${input.rounds} rounds (${Math.floor(totalTime / 60)} minutes total)`;
+          totalTime = (workTime + restTime) * rounds;
+          description = `Interval timer: ${workTime}s work, ${restTime}s rest, ${rounds} rounds (${Math.floor(totalTime / 60)} minutes total)`;
           break;
 
         case 'max_hang':
+          const hangTime = input.workTime || 10;
+          const hangRest = input.restTime || 180;
+          const hangRounds = input.rounds || 6;
           timerConfig = {
             type: 'interval',
-            workTime: input.hangTime,
-            restTime: input.restTime,
-            rounds: input.rounds,
-            name: `Max Hang Timer (${input.hangTime}s on ${Math.floor(input.restTime / 60)}min off × ${input.rounds})`,
-            totalTime: (input.hangTime + input.restTime) * input.rounds,
+            workTime: hangTime,
+            restTime: hangRest,
+            rounds: hangRounds,
+            name: `Max Hang Timer (${hangTime}s on ${Math.floor(hangRest / 60)}min off × ${hangRounds})`,
+            totalTime: (hangTime + hangRest) * hangRounds,
             isMaxHang: true,
           };
-          totalTime = (input.hangTime + input.restTime) * input.rounds;
-          description = `Max hang timer: ${input.hangTime}s hangs, ${Math.floor(input.restTime / 60)} minute rest, ${input.rounds} sets (${Math.floor(totalTime / 60)} minutes total)`;
+          totalTime = (hangTime + hangRest) * hangRounds;
+          description = `Max hang timer: ${hangTime}s hangs, ${Math.floor(hangRest / 60)} minute rest, ${hangRounds} sets (${Math.floor(totalTime / 60)} minutes total)`;
           break;
 
         case 'endurance':
-          const enduranceName = input.name || `Endurance Timer (${Math.floor(input.workTime / 60)}min on ${Math.floor(input.restTime / 60)}min off × ${input.rounds})`;
+          const enduranceWork = input.workTime || 1200; // 20 minutes
+          const enduranceRest = input.restTime || 300; // 5 minutes
+          const enduranceRounds = input.rounds || 3;
+          const enduranceName = input.name || `Endurance Timer (${Math.floor(enduranceWork / 60)}min on ${Math.floor(enduranceRest / 60)}min off × ${enduranceRounds})`;
           timerConfig = {
             type: 'interval',
-            workTime: input.workTime,
-            restTime: input.restTime,
-            rounds: input.rounds,
+            workTime: enduranceWork,
+            restTime: enduranceRest,
+            rounds: enduranceRounds,
             name: enduranceName,
-            totalTime: (input.workTime + input.restTime) * input.rounds,
+            totalTime: (enduranceWork + enduranceRest) * enduranceRounds,
             isEndurance: true,
           };
-          totalTime = (input.workTime + input.restTime) * input.rounds;
-          description = `Endurance timer: ${Math.floor(input.workTime / 60)} minute climbs, ${Math.floor(input.restTime / 60)} minute rest, ${input.rounds} rounds`;
+          totalTime = (enduranceWork + enduranceRest) * enduranceRounds;
+          description = `Endurance timer: ${Math.floor(enduranceWork / 60)} minute climbs, ${Math.floor(enduranceRest / 60)} minute rest, ${enduranceRounds} rounds`;
           break;
 
         case 'custom':
+          const customWork = input.workTime || 60;
+          const customRest = input.restTime || 120;
+          const customRounds = input.rounds || 5;
+          const customName = input.name || 'Custom Timer';
           timerConfig = {
             type: 'interval',
-            workTime: input.workTime,
-            restTime: input.restTime,
-            rounds: input.rounds,
-            name: input.name,
-            totalTime: (input.workTime + input.restTime) * input.rounds,
+            workTime: customWork,
+            restTime: customRest,
+            rounds: customRounds,
+            name: customName,
+            totalTime: (customWork + customRest) * customRounds,
           };
-          totalTime = (input.workTime + input.restTime) * input.rounds;
-          description = `Custom timer: ${input.name} - ${input.workTime}s work, ${input.restTime}s rest, ${input.rounds} rounds`;
+          totalTime = (customWork + customRest) * customRounds;
+          description = `Custom timer: ${customName} - ${customWork}s work, ${customRest}s rest, ${customRounds} rounds`;
           break;
+
+        default:
+          throw new Error(`Unknown timer type: ${input.type}`);
       }
 
       return {
@@ -153,7 +131,7 @@ export const createTimerTool = createTool({
 
 // Parse Timer Request Tool
 export const parseTimerRequestTool = createTool({
-  id: 'parse_timer_request',
+  id: 'parseTimerRequest',
   description: 'Parse natural language timer requests and convert them to structured timer configurations.',
   inputSchema: z.object({
     request: z.string().describe('Natural language timer request (e.g., "10 sec on 3 min off x6", "max hang timer", "30 minute endurance session")'),
@@ -169,8 +147,8 @@ export const parseTimerRequestTool = createTool({
           success: true,
           timerType: 'max_hang',
           config: {
-            type: 'max_hang' as const,
-            hangTime: 10,
+            type: 'max_hang',
+            workTime: 10,
             restTime: 180,
             rounds: 6,
           },
@@ -187,7 +165,7 @@ export const parseTimerRequestTool = createTool({
           success: true,
           timerType: 'endurance',
           config: {
-            type: 'endurance' as const,
+            type: 'endurance',
             workTime: Math.floor(duration * 0.7), // 70% work, 30% rest
             restTime: Math.floor(duration * 0.3),
             rounds: 4,
@@ -209,7 +187,7 @@ export const parseTimerRequestTool = createTool({
           success: true,
           timerType: 'interval',
           config: {
-            type: 'interval' as const,
+            type: 'interval',
             workTime: workSeconds,
             restTime: restSeconds,
             rounds: roundCount,
@@ -229,7 +207,7 @@ export const parseTimerRequestTool = createTool({
           success: true,
           timerType: 'simple',
           config: {
-            type: 'simple' as const,
+            type: 'simple',
             duration,
           },
           description: `Detected simple timer request: ${Math.floor(duration / 60)} minutes`,
@@ -253,7 +231,7 @@ export const parseTimerRequestTool = createTool({
 
 // Get Timer Presets Tool
 export const getTimerPresetsTool = createTool({
-  id: 'get_timer_presets',
+  id: 'getTimerPresets',
   description: 'Get common timer presets for different climbing training types.',
   inputSchema: z.object({
     trainingType: z.enum(['max_hang', 'endurance', 'power', 'strength', 'general']).optional(),
@@ -265,7 +243,7 @@ export const getTimerPresetsTool = createTool({
         {
           name: 'Beginner Max Hangs',
           type: 'max_hang',
-          hangTime: 7,
+          workTime: 7,
           restTime: 180,
           rounds: 5,
           description: 'Good starting point for hangboard training',
@@ -273,7 +251,7 @@ export const getTimerPresetsTool = createTool({
         {
           name: 'Intermediate Max Hangs',
           type: 'max_hang',
-          hangTime: 10,
+          workTime: 10,
           restTime: 180,
           rounds: 6,
           description: 'Standard max hang protocol',
@@ -281,7 +259,7 @@ export const getTimerPresetsTool = createTool({
         {
           name: 'Advanced Max Hangs',
           type: 'max_hang',
-          hangTime: 12,
+          workTime: 12,
           restTime: 180,
           rounds: 7,
           description: 'For experienced climbers with strong fingers',
