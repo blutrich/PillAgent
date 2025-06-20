@@ -1059,6 +1059,10 @@ const ClimbingPillApp = () => {
           user.id
         );
         console.log('Training program saved to database successfully');
+        
+        // Add small delay to ensure database commit is complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
       } catch (saveError) {
         console.error('Failed to save training program to database:', saveError);
         console.error('Save error details:', saveError);

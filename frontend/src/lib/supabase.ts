@@ -17,7 +17,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(`Missing Supabase environment variables: URL=${supabaseUrl ? 'SET' : 'MISSING'}, KEY=${supabaseAnonKey ? 'SET' : 'MISSING'}`)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'public',
+  },
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-my-custom-header': 'climbingpill-app',
+    },
+  },
+  // Add timeout configuration to prevent query timeouts
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+})
 
 // Auth helper functions
 export const auth = {

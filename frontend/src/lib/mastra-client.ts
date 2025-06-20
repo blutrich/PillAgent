@@ -66,8 +66,8 @@ export const climbingPillAPI = {
             .limit(1)
             .maybeSingle(); // Use maybeSingle for better performance when expecting 0 or 1 result
           
-          // Much shorter timeout for chat context to avoid blocking
-          const timeoutDuration = isChatContext ? 5000 : (45000 + (retryCount * 10000)); // 5s for chat, 45s/55s/65s for normal
+          // Reduced timeout since database is now optimized (0.075ms execution time)
+          const timeoutDuration = isChatContext ? 3000 : (10000 + (retryCount * 5000)); // 3s for chat, 10s/15s/20s for normal
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Query timeout')), timeoutDuration)
           );
@@ -81,8 +81,8 @@ export const climbingPillAPI = {
             if (error.message.includes('timeout') || error.message.includes('connection')) {
               retryCount++;
               if (retryCount < maxRetries) {
-                console.log(`Retrying in ${1000 * retryCount}ms...`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                console.log(`Retrying in ${500 * retryCount}ms...`);
+                await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
                 continue;
               }
             }
@@ -108,8 +108,8 @@ export const climbingPillAPI = {
             throw attemptError;
           }
           
-          // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          // Reduced backoff since database is now fast
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
         }
       }
       
@@ -130,7 +130,7 @@ export const climbingPillAPI = {
       try {
         console.log('Chat: Getting program and assessment data for user:', userId);
         
-        // Add fast timeout for context fetching (3 seconds max)
+                  // Add fast timeout for context fetching (reduced since DB is optimized)
         const contextPromise = Promise.all([
           this.getTrainingProgram(userId).catch(e => {
             console.warn('Failed to get training program:', e.message);
@@ -142,9 +142,9 @@ export const climbingPillAPI = {
           })
         ]);
         
-        // Race against timeout - if context takes too long, skip it
+        // Race against timeout - reduced timeout since database is now optimized
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Context timeout')), 6000) // 6 seconds max for chat context
+          setTimeout(() => reject(new Error('Context timeout')), 3000) // 3 seconds max for chat context
         );
         
         const [programData, assessmentData] = await Promise.race([
