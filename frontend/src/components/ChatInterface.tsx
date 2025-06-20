@@ -330,9 +330,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       const response = await climbingPillAPI.chat(messageContent, user.id)
       
       console.log('Chat response received:', response)
+      console.log('Response type:', typeof response)
+      console.log('Response keys:', Object.keys(response))
        
-       // Parse response for rich content - use the correct content property
-       const responseContent = response.content || (response as any).text || ''
+       // Parse response for rich content - handle complex response structure
+       let responseContent = ''
+       if (response.content) {
+         responseContent = response.content
+       } else if ((response as any).text) {
+         responseContent = (response as any).text
+       } else if ((response as any).steps && Array.isArray((response as any).steps) && (response as any).steps.length > 0) {
+         // Handle complex response with steps array
+         const lastStep = (response as any).steps[(response as any).steps.length - 1]
+         responseContent = lastStep.text || lastStep.content || ''
+       } else {
+         console.warn('Could not extract content from response:', response)
+         responseContent = 'I received your message but had trouble processing the response format.'
+       }
+       
+       console.log('Extracted response content:', responseContent)
        const richContent = parseMessageForRichContent(responseContent, true)
       
       // If the response mentions specific climbing data, fetch it
