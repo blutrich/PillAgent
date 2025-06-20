@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTool } from '@mastra/core';
+import { createTool } from '@mastra/core/tools';
 
 // Timer types
 const TimerType = z.enum(['simple', 'interval', 'max_hang', 'endurance', 'custom']);
