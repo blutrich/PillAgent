@@ -662,8 +662,8 @@ const ClimbingPillApp = () => {
       // Extract program structure from the AI text response
       const weeks = [];
       
-      // Look for week patterns in the text
-      const weekPattern = /Week\s*(\d+)[-:]?\s*([^\n]*)/gi;
+      // Look for week patterns in the text (match backend format)
+      const weekPattern = /WEEK\s+(\d+)\s*-\s*([^\n]+)/gi;
       const weekMatches = [...text.matchAll(weekPattern)];
       
       if (weekMatches.length === 0) {

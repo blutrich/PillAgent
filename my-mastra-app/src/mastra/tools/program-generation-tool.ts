@@ -167,7 +167,20 @@ FORMATTING RULES:
 5. Include RPE levels and progression notes
 6. Make each session detailed and unique
 
-Generate ALL 6 weeks following this exact structure. Be specific and detailed for each session.`;
+Generate ALL 6 weeks following this exact structure. Be specific and detailed for each session.
+
+CREATIVITY REQUIREMENTS:
+- Use motivational language and climbing-specific terminology
+- Include varied exercise names (e.g., "Power endurance circuits", "Limit bouldering", "Movement flow sessions")
+- Add specific technique focuses (e.g., "heel hooks", "mantles", "dynamic moves", "slab technique")
+- Include mental training elements ("visualization", "route reading", "fear management")
+- Vary session structures to prevent monotony
+- Add climbing-specific warm-ups and cool-downs
+- Include outdoor climbing suggestions when possible
+- Use grade-specific project recommendations
+- Add variety in rest periods and training methods
+
+Make each session unique and engaging while maintaining the scientific methodology.`;
 
 interface ProgramGenerationResult {
   programId: string;
@@ -320,12 +333,23 @@ export const programGenerationTool = createTool({
       const { text } = await generateText({
         model: openai('gpt-4o'),
         prompt,
-        temperature: 0.2, // Lower temperature for more consistent, structured output
+        temperature: 0.4, // Balanced temperature for creativity while maintaining structure
       });
 
       // Log the AI response for debugging
       console.log('=== AI RESPONSE START ===');
-      console.log(text);
+      console.log(`Response length: ${text.length} characters`);
+      console.log(`First 500 chars: ${text.substring(0, 500)}`);
+      console.log(`Last 500 chars: ${text.substring(text.length - 500)}`);
+      
+      // Check for week patterns
+      const weekPattern = /WEEK\s+(\d+)\s*-\s*([^\n]+)/gi;
+      const weekMatches = [...text.matchAll(weekPattern)];
+      console.log(`Week patterns found: ${weekMatches.length}`);
+      weekMatches.forEach((match, i) => {
+        console.log(`  Week ${i + 1}: ${match[0]}`);
+      });
+      
       console.log('=== AI RESPONSE END ===');
 
       // Parse the response into our structured format
