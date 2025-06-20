@@ -328,9 +328,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         try {
       // Send message to AI coach
       const response = await climbingPillAPI.chat(messageContent, user.id)
+      
+      console.log('Chat response received:', response)
        
-       // Parse response for rich content
-       const richContent = parseMessageForRichContent(response.content, true)
+       // Parse response for rich content - use the correct content property
+       const responseContent = response.content || (response as any).text || ''
+       const richContent = parseMessageForRichContent(responseContent, true)
       
       // If the response mentions specific climbing data, fetch it
       let enhancedRichContent = richContent
@@ -358,7 +361,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
              const assistantMessage: Message = {
          role: 'assistant',
-         content: response.content || 'I apologize, but I encountered an issue processing your request. Please try again.',
+         content: responseContent || 'I apologize, but I encountered an issue processing your request. Please try again.',
          richContent: enhancedRichContent || undefined,
          timestamp: new Date()
        }
