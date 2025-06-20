@@ -463,8 +463,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       const [, timerType] = timerConfigMatch
       
       // Extract timer data from the structured response
-      const workTimeMatch = content.match(/Work Time:\s*(\d+)\s*seconds/i)
-      const restTimeMatch = content.match(/Rest Time:\s*(\d+)\s*seconds/i)
+      const workTimeMatch = content.match(/Work Time:\s*(\d+)\s*(seconds?|minutes?)/i)
+      const restTimeMatch = content.match(/Rest Time:\s*(\d+)\s*(seconds?|minutes?)/i)
       const roundsMatch = content.match(/Rounds:\s*(\d+)/i)
       const durationMatch = content.match(/Duration:\s*(\d+)\s*(?:seconds|minutes)/i)
       const totalDurationMatch = content.match(/Total Duration:\s*(\d+)\s*minutes/i)
@@ -479,8 +479,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
           }
         }
       } else if ((timerType === 'interval' || timerType === 'max_hang' || timerType === 'endurance') && workTimeMatch && restTimeMatch && roundsMatch) {
-        const workTime = parseInt(workTimeMatch[1])
-        const restTime = parseInt(restTimeMatch[1])
+        const workTime = workTimeMatch[2]?.includes('minute') ? parseInt(workTimeMatch[1]) * 60 : parseInt(workTimeMatch[1])
+        const restTime = restTimeMatch[2]?.includes('minute') ? parseInt(restTimeMatch[1]) * 60 : parseInt(restTimeMatch[1])
         const rounds = parseInt(roundsMatch[1])
         const totalTime = totalDurationMatch ? parseInt(totalDurationMatch[1]) * 60 : (workTime + restTime) * rounds
         
