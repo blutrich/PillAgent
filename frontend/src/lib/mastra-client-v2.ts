@@ -51,9 +51,9 @@ export const climbingPillAPI = {
     try {
       console.log('💾 V2 API: getLatestProgram - Querying for user:', userId);
       
-      // Add retry logic for better reliability
+      // Add retry logic for better reliability (reduced for faster fallback)
       let retryCount = 0;
-      const maxRetries = 3;
+      const maxRetries = 2;
       
       while (retryCount < maxRetries) {
         try {
@@ -66,8 +66,8 @@ export const climbingPillAPI = {
             .limit(1)
             .maybeSingle(); // Use maybeSingle for better performance when expecting 0 or 1 result
           
-          // Increased timeout for EU-North region latency
-          const timeoutDuration = 45000 + (retryCount * 10000); // 45s, 55s, 65s
+          // Shorter timeout for better UX - if DB is slow, fall back quickly
+          const timeoutDuration = 3000 + (retryCount * 1000); // 3s, 4s, 5s
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Query timeout')), timeoutDuration)
           );
@@ -121,8 +121,11 @@ export const climbingPillAPI = {
   },
 
   // Chat with the AI coach
-  async chat(message: string, userId: string, threadId: string = 'main-conversation') {
+  async chat(message: string, userId: string, threadId?: string) {
     try {
+      // Use user-specific thread ID to avoid conflicts between users
+      const actualThreadId = threadId || `user-${userId}-conversation`;
+      
       // Get user's current program and assessment data to provide context
       // Make this non-blocking with fast timeout - if context fails, continue with just the message
       let contextMessage = message;
@@ -155,28 +158,34 @@ export const climbingPillAPI = {
         console.log('Chat: Program data retrieved:', programData);
         console.log('Chat: Assessment data retrieved:', assessmentData);
 
-        // Build context message with user's current program and assessment
-        if (programData?.detailedProgram || assessmentData) {
-          const context = {
-            userMessage: message,
-            currentProgram: programData?.detailedProgram,
-            programName: programData?.name,
-            currentWeek: programData?.currentWeek,
-            assessmentData: assessmentData ? {
-              predictedGrade: assessmentData.predicted_grade,
-              compositeScore: assessmentData.composite_score,
-              currentGrade: assessmentData.current_grade,
-              targetGrade: assessmentData.target_grade
-            } : null
-          };
-          contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
-          console.log('Chat: Sending context message:', contextMessage);
-        } else {
-          console.log('Chat: No program or assessment data found, sending message without context');
-        }
+        // Always build context with user info - even if no program/assessment data
+        const context = {
+          userMessage: message,
+          userId: userId,
+          isExistingUser: true, // This user is authenticated, so they exist
+          currentProgram: programData?.detailedProgram,
+          programName: programData?.name,
+          currentWeek: programData?.currentWeek,
+          assessmentData: assessmentData ? {
+            predictedGrade: assessmentData.predicted_grade,
+            compositeScore: assessmentData.composite_score,
+            currentGrade: assessmentData.current_grade,
+            targetGrade: assessmentData.target_grade
+          } : null
+        };
+        contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
+        console.log('Chat: Sending context message:', contextMessage);
       } catch (error) {
         console.warn('Chat: Context fetching failed or timed out, continuing without context:', error instanceof Error ? error.message : String(error));
-        // Continue with just the message - don't let context issues block the chat
+        // Even if context fetching fails, still tell AI this is an existing user
+        const fallbackContext = {
+          userMessage: message,
+          userId: userId,
+          isExistingUser: true,
+          note: "Context fetching timed out, but this is an authenticated existing user"
+        };
+        contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(fallbackContext)}`;
+        console.log('Chat: Using fallback context:', contextMessage);
       }
 
       const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/generate`, {
@@ -186,9 +195,9 @@ export const climbingPillAPI = {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          messages: [{ role: 'user', content: contextMessage }],  // Fix: Send proper message object format
+          messages: [contextMessage],  // Fix: API expects Array<string>, not Array<object>
           resourceid: userId,   // API uses lowercase 'resourceid'
-          threadId: threadId    // Thread ID for conversation context
+          threadId: actualThreadId    // Thread ID for conversation context
         }),
         signal: AbortSignal.timeout(30000) // 30 second timeout
       });

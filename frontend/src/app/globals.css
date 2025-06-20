@@ -343,31 +343,124 @@ body {
 
 /* Journal notice styling */
 .journal-notice {
-  display: inline-block;
-  background: rgba(163, 217, 119, 0.2); /* Lime green with transparency */
-  color: #a3d977; /* Lime green */
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin: 0 4px;
-  border: 1px solid rgba(163, 217, 119, 0.3);
-  animation: journal-pulse 2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(163, 217, 119, 0.25), rgba(163, 217, 119, 0.15));
+  color: #a3d977;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0 6px;
+  border: 1px solid rgba(163, 217, 119, 0.4);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(163, 217, 119, 0.2);
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes journal-pulse {
+/* Flash animation for new journal entries */
+.journal-flash {
+  animation: journal-flash-sequence 3s ease-in-out;
+}
+
+@keyframes journal-flash-sequence {
   0% { 
-    background: rgba(163, 217, 119, 0.4);
-    transform: scale(1);
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.6), rgba(163, 217, 119, 0.4));
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(163, 217, 119, 0.5);
+  }
+  25% { 
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.8), rgba(163, 217, 119, 0.6));
+    transform: scale(1.15);
+    box-shadow: 0 6px 20px rgba(163, 217, 119, 0.6);
   }
   50% { 
-    background: rgba(163, 217, 119, 0.2);
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.4), rgba(163, 217, 119, 0.3));
     transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(163, 217, 119, 0.3);
+  }
+  75% { 
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.5), rgba(163, 217, 119, 0.4));
+    transform: scale(1.08);
+    box-shadow: 0 5px 18px rgba(163, 217, 119, 0.4);
   }
   100% { 
-    background: rgba(163, 217, 119, 0.2);
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.25), rgba(163, 217, 119, 0.15));
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(163, 217, 119, 0.2);
+  }
+}
+
+/* Success state for saved entries */
+.journal-success {
+  animation: journal-success-pulse 2s ease-in-out;
+}
+
+@keyframes journal-success-pulse {
+  0% { 
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.4), rgba(163, 217, 119, 0.3));
+    transform: scale(1.05);
+  }
+  50% { 
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.6), rgba(163, 217, 119, 0.4));
+    transform: scale(1.1);
+  }
+  100% { 
+    background: linear-gradient(135deg, rgba(163, 217, 119, 0.25), rgba(163, 217, 119, 0.15));
     transform: scale(1);
   }
+}
+
+/* Individual elements within journal notice */
+.journal-icon {
+  font-size: 1rem;
+  animation: journal-icon-bounce 2s ease-in-out;
+}
+
+.journal-text {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.journal-sparkle {
+  font-size: 0.8rem;
+  animation: journal-sparkle-twinkle 2s ease-in-out infinite;
+}
+
+@keyframes journal-icon-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-2px) rotate(5deg); }
+  75% { transform: translateY(-1px) rotate(-3deg); }
+}
+
+@keyframes journal-sparkle-twinkle {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+}
+
+/* Shimmer effect overlay */
+.journal-notice::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: journal-shimmer 3s ease-in-out;
+}
+
+@keyframes journal-shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
 }
 
 /* Scrollable content with momentum */

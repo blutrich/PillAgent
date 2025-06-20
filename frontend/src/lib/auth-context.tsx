@@ -22,56 +22,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session with timeout
-    const getInitialSession = async () => {
-      try {
-        console.log('🔄 Getting initial session...')
-        
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 10000)
-        )
-        
-        const sessionPromise = auth.getCurrentUser()
-        
-        const { user: currentUser, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any
-        
-        console.log('👤 Current user:', currentUser ? 'Found' : 'None', error ? `Error: ${error.message}` : '')
-        setUser(currentUser)
-        
-        if (currentUser) {
-          console.log('📋 Loading user profile for:', currentUser.id)
-          try {
-            const { data: profile, error: profileError } = await db.getUserProfile(currentUser.id)
-            console.log('📋 Profile result:', profile ? 'Found' : 'None', profileError ? `Error: ${profileError.message}` : '')
-            setUserProfile(profile)
-          } catch (profileErr) {
-            console.error('📋 Profile loading error:', profileErr)
-            // Continue without profile
-          }
-        }
-        
-        console.log('✅ Auth initialization complete, setting loading to false')
-        setLoading(false)
-      } catch (error) {
-        console.error('❌ Auth initialization error:', error)
-        console.log('⚠️ Setting loading to false due to error')
-        // Set user to null and continue
-        setUser(null)
-        setUserProfile(null)
+    // Don't try to get initial session synchronously - let the auth state change handler do it
+    console.log('🔄 Setting up auth listener...')
+    
+    // Set a longer timeout for the auth system to initialize
+    const initTimeout = setTimeout(() => {
+      console.log('⏰ Auth initialization timeout - assuming no user')
+      if (loading) {
         setLoading(false)
       }
-    }
-
-    getInitialSession()
+    }, 15000) // Increased to 15 seconds
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
       try {
         console.log('🔔 Auth state change:', event, session?.user ? 'User present' : 'No user')
+        
+        // Clear the initialization timeout since we got an auth event
+        clearTimeout(initTimeout)
+        
         setUser(session?.user ?? null)
         
         if (session?.user) {
@@ -108,7 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(initTimeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string, userData?: { firstName?: string; lastName?: string }) => {

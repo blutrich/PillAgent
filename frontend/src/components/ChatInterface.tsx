@@ -29,26 +29,65 @@ const ProgramChart = ({ programData }: { programData: any }) => {
 }
 
 const SessionTimer = ({ session }: { session: any }) => {
-  const [timeLeft, setTimeLeft] = useState(session?.duration * 60 || 5400) // Default 90 min
+  // Handle both interval and duration timers
+  const isIntervalTimer = session?.workTime && session?.restTime && session?.rounds
+  
+  // For interval timers
+  const [currentRound, setCurrentRound] = useState(1)
+  const [isWorkPhase, setIsWorkPhase] = useState(true) // true = work, false = rest
+  const [timeLeft, setTimeLeft] = useState(
+    isIntervalTimer 
+      ? session.workTime 
+      : (session?.duration ? session.duration * 60 : 5400)
+  )
   const [isRunning, setIsRunning] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
+  
+  // Dynamic editing state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editWorkTime, setEditWorkTime] = useState(session?.workTime || 30)
+  const [editRestTime, setEditRestTime] = useState(session?.restTime || 60)
+  const [editRounds, setEditRounds] = useState(session?.rounds || 4)
   
   useEffect(() => {
     let interval: NodeJS.Timeout
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft(time => {
+        setTimeLeft((time: number) => {
           if (time <= 1) {
-            setIsRunning(false)
-            setIsCompleted(true)
-            return 0
+            if (isIntervalTimer) {
+              // Handle interval transitions
+              if (isWorkPhase) {
+                // Work phase ending, switch to rest
+                setIsWorkPhase(false)
+                return session.restTime
+              } else {
+                // Rest phase ending
+                if (currentRound < session.rounds) {
+                  // Start next round
+                  setCurrentRound(prev => prev + 1)
+                  setIsWorkPhase(true)
+                  return session.workTime
+                } else {
+                  // All rounds complete
+                  setIsRunning(false)
+                  setIsCompleted(true)
+                  return 0
+                }
+              }
+            } else {
+              // Simple timer complete
+              setIsRunning(false)
+              setIsCompleted(true)
+              return 0
+            }
           }
           return time - 1
         })
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [isRunning, timeLeft])
+  }, [isRunning, timeLeft, isWorkPhase, currentRound, session, isIntervalTimer])
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -56,43 +95,168 @@ const SessionTimer = ({ session }: { session: any }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
   
+  const resetTimer = () => {
+    if (isIntervalTimer) {
+      setCurrentRound(1)
+      setIsWorkPhase(true)
+      setTimeLeft(session.workTime)
+    } else {
+      setTimeLeft(session?.duration * 60 || 5400)
+    }
+    setIsRunning(false)
+    setIsCompleted(false)
+  }
+  
+  const applyEdits = () => {
+    // Update session data with new values
+    session.workTime = editWorkTime
+    session.restTime = editRestTime
+    session.rounds = editRounds
+    session.totalTime = (editWorkTime + editRestTime) * editRounds
+    session.name = `${editWorkTime}s on ${editRestTime}s off × ${editRounds}`
+    
+    // Reset timer with new values
+    setCurrentRound(1)
+    setIsWorkPhase(true)
+    setTimeLeft(editWorkTime)
+    setIsRunning(false)
+    setIsCompleted(false)
+    setIsEditing(false)
+  }
+  
   return (
     <div className="bg-gray-800 rounded-lg p-4 my-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Timer className="w-5 h-5 text-pink-400" />
-        <h3 className="text-white font-medium">Session Timer</h3>
-      </div>
-      <div className="text-center">
-        <div className="text-3xl font-bold text-white mb-4">
-          {formatTime(timeLeft)}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Timer className="w-5 h-5 text-pink-400" />
+          <h3 className="text-white font-medium">
+            {session?.name || 'Session Timer'}
+          </h3>
         </div>
-        <div className="flex justify-center gap-2">
+        {isIntervalTimer && (
           <button
-            onClick={() => setIsRunning(!isRunning)}
-            className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg text-white"
+            onClick={() => setIsEditing(!isEditing)}
+            className="text-gray-400 hover:text-white text-sm"
           >
-            {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            {isRunning ? 'Pause' : 'Start'}
+            {isEditing ? 'Cancel' : 'Edit'}
           </button>
-          <button
-            onClick={() => {
-              setTimeLeft(session?.duration * 60 || 5400)
-              setIsRunning(false)
-              setIsCompleted(false)
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset
-          </button>
-        </div>
-        {isCompleted && (
-          <div className="flex items-center justify-center gap-2 mt-4 text-lime-400">
-            <CheckCircle className="w-5 h-5" />
-            <span>Session Complete!</span>
-          </div>
         )}
       </div>
+      
+      {isIntervalTimer && !isEditing && (
+        <div className="text-center mb-4">
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <div className={`px-3 py-1 rounded-full text-sm ${
+              isWorkPhase ? 'bg-pink-500 text-white' : 'bg-gray-600 text-gray-300'
+            }`}>
+              WORK
+            </div>
+            <div className={`px-3 py-1 rounded-full text-sm ${
+              !isWorkPhase ? 'bg-teal-500 text-white' : 'bg-gray-600 text-gray-300'
+            }`}>
+              REST
+            </div>
+          </div>
+          <div className="text-sm text-gray-400">
+            Round {currentRound} of {session.rounds}
+          </div>
+        </div>
+      )}
+      
+      {isIntervalTimer && isEditing && (
+        <div className="mb-4 p-3 bg-gray-700 rounded-lg">
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Work (sec)</label>
+              <input
+                type="number"
+                value={editWorkTime}
+                onChange={(e) => setEditWorkTime(parseInt(e.target.value) || 0)}
+                className="w-full bg-gray-600 text-white rounded px-2 py-1 text-sm"
+                min="1"
+                max="3600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Rest (sec)</label>
+              <input
+                type="number"
+                value={editRestTime}
+                onChange={(e) => setEditRestTime(parseInt(e.target.value) || 0)}
+                className="w-full bg-gray-600 text-white rounded px-2 py-1 text-sm"
+                min="1"
+                max="3600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Rounds</label>
+              <input
+                type="number"
+                value={editRounds}
+                onChange={(e) => setEditRounds(parseInt(e.target.value) || 1)}
+                className="w-full bg-gray-600 text-white rounded px-2 py-1 text-sm"
+                min="1"
+                max="50"
+              />
+            </div>
+          </div>
+          <div className="text-center">
+            <button
+              onClick={applyEdits}
+              className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg text-sm"
+            >
+              Apply Changes
+            </button>
+          </div>
+          <div className="text-xs text-gray-400 text-center mt-2">
+            Total: {Math.floor(((editWorkTime + editRestTime) * editRounds) / 60)}:{(((editWorkTime + editRestTime) * editRounds) % 60).toString().padStart(2, '0')}
+          </div>
+        </div>
+      )}
+      
+      {!isEditing && (
+        <div className="text-center">
+          <div className={`text-4xl font-bold mb-4 ${
+            isIntervalTimer 
+              ? (isWorkPhase ? 'text-pink-400' : 'text-teal-400')
+              : 'text-white'
+          }`}>
+            {formatTime(timeLeft)}
+          </div>
+          
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => setIsRunning(!isRunning)}
+              className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg text-white"
+            >
+              {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {isRunning ? 'Pause' : 'Start'}
+            </button>
+            <button
+              onClick={resetTimer}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </button>
+          </div>
+          
+          {isCompleted && (
+            <div className="flex items-center justify-center gap-2 mt-4 text-lime-400">
+              <CheckCircle className="w-5 h-5" />
+              <span>
+                {isIntervalTimer ? `${session.rounds} rounds complete!` : 'Session Complete!'}
+              </span>
+            </div>
+          )}
+          
+          {isIntervalTimer && !isCompleted && (
+            <div className="mt-4 text-sm text-gray-400">
+              Total time: {formatTime(session.totalTime)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -239,18 +403,149 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
   // Enhanced message parsing to detect rich content requests
   const parseMessageForRichContent = (content: string, isAssistant: boolean = false) => {
-    if (!isAssistant) return null
+    // For user messages, only check for timer patterns
+    if (!isAssistant) {
+              // First check for interval timer patterns (these can exist without the word "timer")
+        const timerMatch = content.match(/(\d+)\s*(sec|second|min|minute|mi)s?\s*on\s*(\d+)\s*(sec|second|min|minute|mi)s?\s*off\s*(?:x|×)?(\d+)?/i)
+        
+        if (timerMatch) {
+          const [, workTime, workUnit, restTime, restUnit, rounds] = timerMatch
+          const workSeconds = (workUnit.startsWith('min') || workUnit === 'mi') ? parseInt(workTime) * 60 : parseInt(workTime)
+          const restSeconds = (restUnit.startsWith('min') || restUnit === 'mi') ? parseInt(restTime) * 60 : parseInt(restTime)
+          
+          // Default to 4 rounds if not specified
+          const roundCount = rounds ? parseInt(rounds) : 4
+          
+          return { 
+            type: 'timer' as const, 
+            data: { 
+              workTime: workSeconds,
+              restTime: restSeconds,
+              rounds: roundCount,
+              totalTime: (workSeconds + restSeconds) * roundCount,
+              name: rounds ? `${workTime}${workUnit.substring(0,3)} on ${restTime}${restUnit.substring(0,3)} off × ${rounds}` : `${workTime}${workUnit.substring(0,3)} on ${restTime}${restUnit.substring(0,3)} off × ${roundCount}`
+            } 
+          }
+        }
+      
+              // Then check for general timer requests (very restrictive for assistant responses)
+        const lowerContent = content.toLowerCase()
+        if (lowerContent.includes('session time') || 
+            lowerContent.includes('start session') ||
+            (lowerContent.includes('timer') && lowerContent.includes('start') && !lowerContent.includes('set up') && !lowerContent.includes('how'))) {
+          // Smart defaults for specific timer types
+          if (lowerContent.includes('max hang') || lowerContent.includes('hangboard')) {
+            return { 
+              type: 'timer' as const, 
+              data: { 
+                workTime: 10,
+                restTime: 180, // 3 minutes
+                rounds: 6,
+                totalTime: (10 + 180) * 6, // 19 minutes
+                name: 'Max Hang Timer (10s on 3min off × 6)'
+              } 
+            }
+          }
+          
+          // Default timer for simple requests
+          return { type: 'timer' as const, data: { duration: 90, name: 'Training Session' } }
+        }
+      
+      return null
+    }
 
     const lowerContent = content.toLowerCase()
+    
+    // First check for timer tool responses - look for structured timer data
+    const timerConfigMatch = content.match(/\*\*Timer Configuration:\*\*[\s\S]*?- Type: (interval|simple|max_hang|endurance)[\s\S]*?- (?:Work Time: (\d+) seconds|Duration: (\d+) (?:seconds|minutes))/i)
+    
+    if (timerConfigMatch) {
+      const [, timerType, workTime, simpleDuration] = timerConfigMatch
+      
+      if (timerType === 'simple' && simpleDuration) {
+        const duration = simpleDuration.includes('minute') ? parseInt(simpleDuration) * 60 : parseInt(simpleDuration)
+        return {
+          type: 'timer' as const,
+          data: {
+            duration,
+            name: 'Training Timer'
+          }
+        }
+      } else if (timerType === 'interval' || timerType === 'max_hang' || timerType === 'endurance') {
+        // Extract rest time and rounds from the structured response
+        const restTimeMatch = content.match(/- Rest Time: (\d+) seconds/i)
+        const roundsMatch = content.match(/- Rounds: (\d+)/i)
+        const totalTimeMatch = content.match(/- Total Duration: (\d+) minutes/i)
+        
+        if (workTime && restTimeMatch && roundsMatch) {
+          const restTime = parseInt(restTimeMatch[1])
+          const rounds = parseInt(roundsMatch[1])
+          const totalTime = totalTimeMatch ? parseInt(totalTimeMatch[1]) * 60 : (parseInt(workTime) + restTime) * rounds
+          
+          return {
+            type: 'timer' as const,
+            data: {
+              workTime: parseInt(workTime),
+              restTime,
+              rounds,
+              totalTime,
+              name: `${timerType === 'max_hang' ? 'Max Hang' : timerType === 'endurance' ? 'Endurance' : 'Interval'} Timer`,
+              isMaxHang: timerType === 'max_hang',
+              isEndurance: timerType === 'endurance'
+            }
+          }
+        }
+      }
+    }
     
     // Detect program-related content
     if (lowerContent.includes('program') || lowerContent.includes('training plan') || lowerContent.includes('weeks')) {
       return { type: 'program' as const, data: null }
     }
     
-    // Detect timer requests
-    if (lowerContent.includes('timer') || lowerContent.includes('session time') || lowerContent.includes('start session')) {
-      return { type: 'timer' as const, data: { duration: 90 } }
+    // First check for interval timer patterns (these can exist without the word "timer")
+    const timerMatch = content.match(/(\d+)\s*(sec|second|min|minute|mi)s?\s*on\s*(\d+)\s*(sec|second|min|minute|mi)s?\s*off\s*(?:x|×)?(\d+)?/i)
+    
+    if (timerMatch) {
+      const [, workTime, workUnit, restTime, restUnit, rounds] = timerMatch
+      const workSeconds = (workUnit.startsWith('min') || workUnit === 'mi') ? parseInt(workTime) * 60 : parseInt(workTime)
+      const restSeconds = (restUnit.startsWith('min') || restUnit === 'mi') ? parseInt(restTime) * 60 : parseInt(restTime)
+      
+      // Default to 4 rounds if not specified
+      const roundCount = rounds ? parseInt(rounds) : 4
+      
+      return { 
+        type: 'timer' as const, 
+        data: { 
+          workTime: workSeconds,
+          restTime: restSeconds,
+          rounds: roundCount,
+          totalTime: (workSeconds + restSeconds) * roundCount,
+          name: rounds ? `${workTime}${workUnit.substring(0,3)} on ${restTime}${restUnit.substring(0,3)} off × ${rounds}` : `${workTime}${workUnit.substring(0,3)} on ${restTime}${restUnit.substring(0,3)} off × ${roundCount}`
+        } 
+      }
+    }
+    
+    // Then check for general timer requests (but be more specific to avoid false positives)
+    if ((lowerContent.includes('timer') && (lowerContent.includes('start') || lowerContent.includes('create') || lowerContent.includes('set'))) || 
+        lowerContent.includes('session time') || 
+        lowerContent.includes('start session')) {
+      // Smart defaults for specific timer types
+      if (lowerContent.includes('max hang') || lowerContent.includes('hangboard')) {
+        return { 
+          type: 'timer' as const, 
+          data: { 
+            workTime: 10,
+            restTime: 180, // 3 minutes
+            rounds: 6,
+            totalTime: (10 + 180) * 6, // 19 minutes
+            name: 'Max Hang Timer (10s on 3min off × 6)'
+          } 
+        }
+      }
+      
+      // Default timer for simple requests
+      return { type: 'timer' as const, data: { duration: 90, name: 'Training Session' } }
     }
     
     // Detect assessment content
@@ -315,6 +610,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       return
     }
 
+    // Check if user message contains timer patterns and create rich content immediately
+    const userTimerContent = parseMessageForRichContent(messageContent, false)
+    
     const userMessage: Message = {
       role: 'user',
       content: messageContent,
@@ -328,31 +626,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         try {
       // Send message to AI coach
       const response = await climbingPillAPI.chat(messageContent, user.id)
-      
-      console.log('Chat response received:', response)
-      console.log('Response type:', typeof response)
-      console.log('Response keys:', Object.keys(response))
        
-       // Parse response for rich content - handle complex response structure
-       let responseContent = ''
-       if (response.content) {
-         responseContent = response.content
-       } else if ((response as any).text) {
-         responseContent = (response as any).text
-       } else if ((response as any).steps && Array.isArray((response as any).steps) && (response as any).steps.length > 0) {
-         // Handle complex response with steps array
-         const lastStep = (response as any).steps[(response as any).steps.length - 1]
-         responseContent = lastStep.text || lastStep.content || ''
-       } else {
-         console.warn('Could not extract content from response:', response)
-         responseContent = 'I received your message but had trouble processing the response format.'
-       }
-       
-       console.log('Extracted response content:', responseContent)
-       const richContent = parseMessageForRichContent(responseContent, true)
-      
-      // If the response mentions specific climbing data, fetch it
-      let enhancedRichContent = richContent
+             // Parse response for rich content - response.content is the correct field from mastra-client
+      const responseContent = response.content || 'No response received'
+      const richContent = parseMessageForRichContent(responseContent, true)
+     
+     // If user message contained timer pattern, use ONLY that - ignore assistant timer content
+     let enhancedRichContent = userTimerContent
+     if (!userTimerContent) {
+       enhancedRichContent = richContent
+     }
       if (richContent?.type === 'program') {
         try {
           const programData = await climbingPillAPI.getLatestProgram(user.id)
@@ -377,7 +660,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
              const assistantMessage: Message = {
          role: 'assistant',
-         content: responseContent || 'I apologize, but I encountered an issue processing your request. Please try again.',
+         content: responseContent,
          richContent: enhancedRichContent || undefined,
          timestamp: new Date()
        }

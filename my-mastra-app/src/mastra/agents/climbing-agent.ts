@@ -27,6 +27,11 @@ import {
   getUserProfileTool, 
   updateUserProfileTool 
 } from '../tools/user-profile-tool';
+import { 
+  createTimerTool, 
+  parseTimerRequestTool, 
+  getTimerPresetsTool 
+} from '../tools/timer-tool';
 import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow';
 
 const llm = openai('gpt-4o');
@@ -407,6 +412,48 @@ export const climbingAgent = new Agent({
     - ALWAYS call queryJournal tool when users ask "what's in my journal", "show my journal", or similar queries
     - ALWAYS call createJournalEntry tool when users ask to save something to their journal
 
+    TIMER TOOL USAGE:
+    When users request timers, ALWAYS use the timer tools instead of just describing timer setups:
+    
+    AUTOMATIC TIMER CREATION:
+    For timer requests like:
+    - "10 sec on 3 min off x6" → Use createTimer with interval type
+    - "max hang timer" → Use createTimer with max_hang type  
+    - "30 minute endurance session" → Use createTimer with endurance type
+    - "5 minute timer" → Use createTimer with simple type
+    
+    SMART PARSING:
+    1. First use parseTimerRequest tool to understand their request
+    2. Then use createTimer tool with the parsed configuration
+    3. Return the timer configuration in a format the frontend can use
+    
+    TIMER RESPONSE FORMAT:
+    When creating timers, respond with:
+    "Perfect! I've created your [timer type] timer: [description]
+    
+    **Timer Configuration:**
+    - Type: [interval/simple/max_hang/endurance]
+    - Work Time: [X] seconds (if applicable)
+    - Rest Time: [X] seconds (if applicable)  
+    - Rounds: [X] (if applicable)
+    - Total Duration: [X] minutes
+    - Instructions: [specific guidance for this timer type]
+    
+    [Additional coaching advice for the training type]"
+    
+    TIMER PRESETS:
+    Use getTimerPresets tool when users ask:
+    - "What timer options do you have?"
+    - "Show me max hang presets"
+    - "Timer suggestions for [training type]"
+    
+    TIMER COACHING:
+    Provide specific guidance based on timer type:
+    - Max Hang: "Hang at maximum intensity, full recovery between sets"
+    - Endurance: "Maintain steady pace, focus on movement efficiency"  
+    - Power: "Explosive efforts, quality over quantity"
+    - Interval: "Follow work/rest phases precisely for best results"
+
     Remember: Be conversational and smart! Parse what users mean, not just what they say exactly. Your goal is 85% completion rate with 5-minute average time through intelligent, flexible conversation that feels natural while staying efficient.
   `,
   model: llm,
@@ -438,7 +485,12 @@ export const climbingAgent = new Agent({
     
     // User profile tools
     getUserProfile: getUserProfileTool,
-    updateUserProfile: updateUserProfileTool
+    updateUserProfile: updateUserProfileTool,
+    
+    // Timer tools
+    createTimer: createTimerTool,
+    parseTimerRequest: parseTimerRequestTool,
+    getTimerPresets: getTimerPresetsTool
   },
   workflows: {
     simpleRetentionWorkflow

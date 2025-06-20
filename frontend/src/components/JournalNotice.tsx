@@ -7,7 +7,7 @@ interface JournalNoticeProps {
 
 /**
  * Component to parse and style journal notices in chat messages
- * Converts {adding to journal} text into styled notice badges
+ * Converts {adding to journal} text into beautiful animated notices
  */
 export const JournalNotice: React.FC<JournalNoticeProps> = ({ content }) => {
   // Parse the content to find journal notices
@@ -18,8 +18,10 @@ export const JournalNotice: React.FC<JournalNoticeProps> = ({ content }) => {
       // Check if this part is a journal notice
       if (part.match(/^\{adding to journal\}$/i)) {
         return (
-          <span key={index} className="journal-notice">
-            📝 adding to journal
+          <span key={index} className="journal-notice journal-flash">
+            <span className="journal-icon">📝</span>
+            <span className="journal-text">Journal updated</span>
+            <span className="journal-sparkle">✨</span>
           </span>
         );
       }
@@ -27,16 +29,19 @@ export const JournalNotice: React.FC<JournalNoticeProps> = ({ content }) => {
       // Check for other potential journal-related notices
       if (part.match(/^\{saved to journal\}$/i)) {
         return (
-          <span key={index} className="journal-notice">
-            ✅ saved to journal
+          <span key={index} className="journal-notice journal-success">
+            <span className="journal-icon">✅</span>
+            <span className="journal-text">Saved to journal</span>
           </span>
         );
       }
       
       if (part.match(/^\{journal updated\}$/i)) {
         return (
-          <span key={index} className="journal-notice">
-            🔄 journal updated
+          <span key={index} className="journal-notice journal-flash">
+            <span className="journal-icon">🔄</span>
+            <span className="journal-text">Journal updated</span>
+            <span className="journal-sparkle">✨</span>
           </span>
         );
       }
