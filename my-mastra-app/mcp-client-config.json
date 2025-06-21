@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "climbingpill-ai-coach": {
+      "command": "tsx",
+      "args": ["start-mcp-server.ts", "stdio"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key",
+        "SUPABASE_URL": "your-supabase-url",
+        "SUPABASE_ANON_KEY": "your-supabase-anon-key",
+        "TAVILY_API_KEY": "your-tavily-api-key",
+        "WEATHER_API_KEY": "your-weather-api-key"
+      }
+    }
+  },
+  "httpServers": {
+    "climbingpill-http": {
+      "url": "http://localhost:8080/mcp",
+      "description": "ClimbingPill AI Coach via HTTP"
+    }
+  },
+  "sseServers": {
+    "climbingpill-sse": {
+      "url": "http://localhost:8080/sse",
+      "description": "ClimbingPill AI Coach via SSE"
+    }
+  },
+  "usage": {
+    "cursor": {
+      "description": "Add to Cursor's MCP settings",
+      "file": "~/.cursor-mcp/config.json",
+      "config": {
+        "mcpServers": {
+          "climbingpill": {
+            "command": "tsx",
+            "args": ["path/to/start-mcp-server.ts", "stdio"],
+            "env": {
+              "OPENAI_API_KEY": "your-key-here"
+            }
+          }
+        }
+      }
+    },
+    "claude-desktop": {
+      "description": "Add to Claude Desktop configuration",
+      "file": "~/Library/Application Support/Claude/claude_desktop_config.json",
+      "config": {
+        "mcpServers": {
+          "climbingpill-ai-coach": {
+            "command": "tsx",
+            "args": ["path/to/start-mcp-server.ts", "stdio"]
+          }
+        }
+      }
+    }
+  }
+} 
