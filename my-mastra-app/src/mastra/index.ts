@@ -31,7 +31,24 @@ export const mastra = new Mastra({
   logger: new PinoLogger({
     name: 'ClimbingPill-Mastra',
     level: 'info'
-  })
+  }),
+  // Add server configuration for cloud deployment
+  server: {
+    port: process.env.PORT ? parseInt(process.env.PORT) : 4111,
+    cors: {
+      origin: '*', // Allow all origins for MCP connections
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Authorization', 'x-mastra-*'],
+      credentials: true,
+    },
+    middleware: [
+      // Add logging middleware
+      async (c, next) => {
+        console.log(`${c.req.method} ${c.req.url}`);
+        await next();
+      }
+    ]
+  }
 });
 
 // Export Supabase for use in tools and agents

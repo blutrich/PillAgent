@@ -24,6 +24,7 @@
     "@mastra/inngest": "^0.10.4",
     "@mastra/libsql": "^0.10.2",
     "@mastra/loggers": "^0.10.2",
+    "@mastra/mcp": "^0.10.4",
     "@mastra/mcp-docs-server": "^0.13.0",
     "@mastra/memory": "^0.10.3",
     "@mastra/pg": "^0.10.3",

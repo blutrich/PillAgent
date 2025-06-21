@@ -21,6 +21,7 @@ export const climbingPillMCPServer = new MCPServer({
   name: "ClimbingPill AI Coach Server",
   version: "1.0.0",
   description: "Professional climbing training AI with assessment, program generation, and coaching tools",
+  id: "climbingpill-ai-coach-server", // Add explicit ID for cloud deployment
   
   // Expose core climbing tools
   tools: {
@@ -42,7 +43,7 @@ export const climbingPillMCPServer = new MCPServer({
 
   // Optional: Add repository info for discoverability
   repository: {
-    url: "https://github.com/your-username/climbingpill",
+    url: "https://github.com/blutrich/PillAgent",
     source: "github",
     id: "climbingpill-ai-coach"
   },
