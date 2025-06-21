@@ -10,19 +10,44 @@ const ProgramChart = ({ programData }: { programData: any }) => {
   if (!programData?.weeks) return null;
   
   return (
-    <div className="bg-gray-800 rounded-lg p-4 my-4">
+    <div className="bg-gray-800 rounded-lg p-4 my-4 overflow-hidden">
       <div className="flex items-center gap-2 mb-3">
         <BarChart3 className="w-5 h-5 text-lime-400" />
         <h3 className="text-white font-medium">Training Program Overview</h3>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {programData.weeks.map((week: any, index: number) => (
-          <div key={index} className="bg-gray-700 rounded p-2 text-center min-w-0">
-            <div className="text-xs text-gray-400 truncate">Week {week.weekNumber}</div>
-            <div className="text-xs sm:text-sm text-white font-medium truncate">{week.focus}</div>
-            <div className="text-xs text-lime-400">{week.sessions?.length || 0} sessions</div>
-          </div>
-        ))}
+      
+      {/* Mobile: Horizontal scroll with proper padding */}
+      <div className="overflow-x-auto pb-2 -mx-2 px-2">
+        <div className="flex gap-3 min-w-max">
+          {programData.weeks.map((week: any, index: number) => (
+            <div key={index} className="bg-gray-700 rounded-lg p-3 text-center flex-shrink-0 w-28">
+              <div className="text-xs text-gray-400 mb-1">Week {week.weekNumber}</div>
+              <div className="text-sm text-white font-medium mb-1 leading-tight">
+                {week.focus}
+              </div>
+              <div className="text-xs text-lime-400">
+                {week.sessions?.length || 0} sessions
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Desktop: Grid layout for larger screens */}
+      <div className="hidden lg:block">
+        <div className="grid grid-cols-6 gap-3">
+          {programData.weeks.map((week: any, index: number) => (
+            <div key={index} className="bg-gray-700 rounded-lg p-3 text-center">
+              <div className="text-xs text-gray-400 mb-1">Week {week.weekNumber}</div>
+              <div className="text-sm text-white font-medium mb-1 leading-tight">
+                {week.focus}
+              </div>
+              <div className="text-xs text-lime-400">
+                {week.sessions?.length || 0} sessions
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

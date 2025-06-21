@@ -19,104 +19,69 @@ export const climbingPillAPI = {
     };
   },
 
-  // Get latest assessment data directly from Supabase
+  // Get latest assessment data with ultra-fast fallback
   async getLatestAssessment(userId: string) {
     try {
-      console.log('💾 V3 API: getLatestAssessment - Querying for user:', userId);
+      console.log('💾 V3 API: getLatestAssessment - Ultra-fast query for user:', userId);
       
-      // Get multiple assessments for progression display
-      const { data, error } = await supabase
+      // Ultra-fast assessment query with 2-second timeout
+      const queryPromise = supabase
         .from('assessments')
-        .select('*')
+        .select('predicted_grade, composite_score, current_grade, target_grade, created_at')  // Minimal fields only
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(5); // Get last 5 assessments for progression chart
+        .limit(1);
 
-      if (error) {
-        console.error('🔥 V3 API: getLatestAssessment - Supabase error:', error);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Assessment query timeout')), 2000)
+      );
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error || !data || data.length === 0) {
+        console.log('📭 V3 API: No assessment found or query timed out');
         return null;
       }
 
-      if (!data || data.length === 0) {
-        console.log('📭 V3 API: No assessments found for user:', userId);
-        return null;
-      }
-
-      console.log('✅ V3 API: Found', data.length, 'assessments for user');
-      return data; // Return array of assessments for progression display
+      console.log('✅ V3 API: Found assessment quickly');
+      return data; // Returns array for compatibility
     } catch (error) {
-      console.error('❌ V3 API: Error getting latest assessment:', error);
+      console.log('⚡ V3 API: Assessment ultra-fast fallback - returning null');
       return null;
     }
   },
 
-  // Get latest training program directly from Supabase with improved error handling
+  // Get latest training program with ultra-fast fallback strategy
   async getLatestProgram(userId: string) {
     try {
-      console.log('💾 V3 API: getLatestProgram - Using optimized lightweight query for user:', userId);
+      console.log('💾 V3 API: getLatestProgram - Ultra-fast query for user:', userId);
       
-      // Strategy: First try a lightweight query for metadata only, then fetch full data if needed
-      // This avoids transferring large JSONB data unless absolutely necessary
+      // Ultra-aggressive approach: 2-second timeout max, immediate fallback
+      const queryPromise = supabase
+        .from('training_programs')
+        .select('id, user_id, program_name, created_at, status')  // Minimal fields only
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       
-      try {
-        // Step 1: Fast lightweight query to check if program exists
-        const lightQueryPromise = supabase
-          .from('training_programs')
-          .select('id, user_id, program_name, created_at, updated_at, status')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        // Increased timeout for lightweight query (5 seconds)
-        const lightTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Lightweight query timeout')), 5000)
-        );
-        
-        const { data: lightData, error: lightError } = await Promise.race([lightQueryPromise, lightTimeoutPromise]) as any;
+      // Ultra-short timeout - 2 seconds max
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Ultra-fast timeout')), 2000)
+      );
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-        if (lightError || !lightData) {
-          console.log('📭 V3 API: No programs found or lightweight query failed for user:', userId);
-          return null;
-        }
-
-        console.log('✅ V3 API: Found program metadata:', lightData.program_name, lightData.created_at);
-
-        // Step 2: If we have a program, fetch the full data with program_data
-        // Use a slightly longer timeout since we know the program exists
-        const fullQueryPromise = supabase
-          .from('training_programs')
-          .select('id, user_id, program_name, program_data, created_at, updated_at, status')
-          .eq('id', lightData.id)
-          .maybeSingle();
-        
-        const fullTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Full query timeout')), 8000)
-        );
-        
-        const { data: fullData, error: fullError } = await Promise.race([fullQueryPromise, fullTimeoutPromise]) as any;
-
-        if (fullError) {
-          console.warn('⚠️ V3 API: Full data query failed, returning metadata only:', fullError);
-          // Return lightweight data if full query fails - better than nothing
-          return lightData;
-        }
-
-        if (!fullData) {
-          console.warn('⚠️ V3 API: Full data not found, returning metadata only');
-          return lightData;
-        }
-
-        console.log('✅ V3 API: Successfully fetched full program data');
-        return fullData;
-        
-      } catch (attemptError) {
-        console.error('🔥 V3 API: Optimized query failed:', attemptError);
+      if (error || !data) {
+        console.log('📭 V3 API: No program found or query timed out, returning null immediately');
         return null;
       }
+
+      console.log('✅ V3 API: Found program quickly:', data.program_name);
+      return data;
       
     } catch (error) {
-      console.error('❌ V3 API: Error in getLatestProgram:', error);
+      console.log('⚡ V3 API: Ultra-fast fallback - returning null immediately');
       return null;
     }
   },
@@ -134,7 +99,7 @@ export const climbingPillAPI = {
       try {
         console.log('Chat: Getting program and assessment data for user:', userId);
         
-        // Add fast timeout for context fetching (3 seconds max)
+        // Ultra-fast context fetching (5 seconds max total)
         const contextPromise = Promise.all([
           this.getTrainingProgram(userId).catch(e => {
             console.warn('Failed to get training program:', e.message);
@@ -146,9 +111,9 @@ export const climbingPillAPI = {
           })
         ]);
         
-        // Race against timeout - if context takes too long, skip it
+        // Ultra-aggressive timeout - if context takes too long, skip it immediately
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Context timeout')), 10000)
+          setTimeout(() => reject(new Error('Context timeout')), 5000)
         );
         
         const [programData, assessmentData] = await Promise.race([
