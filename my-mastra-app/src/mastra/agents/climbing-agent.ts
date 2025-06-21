@@ -32,6 +32,10 @@ import {
   parseTimerRequestTool, 
   getTimerPresetsTool 
 } from '../tools/timer-tool';
+import { 
+  getProgressAnalyticsTool, 
+  getAnalyticsInsightsTool 
+} from '../tools/analytics-tool';
 import { simpleRetentionWorkflow } from '../workflows/simple-retention-workflow';
 
 const llm = openai('gpt-4o');
@@ -454,6 +458,51 @@ export const climbingAgent = new Agent({
     - Power: "Explosive efforts, quality over quantity"
     - Interval: "Follow work/rest phases precisely for best results"
 
+    ANALYTICS TOOL USAGE:
+    When users request analytics or progress data, ALWAYS use the analytics tools:
+    
+    AUTOMATIC ANALYTICS CREATION:
+    For analytics requests like:
+    - "show my progress" → Use getProgressAnalytics with default metrics
+    - "my training analytics" → Use getProgressAnalytics with all metrics
+    - "strength progression" → Use getProgressAnalytics with strength focus
+    - "consistency analysis" → Use getProgressAnalytics with consistency metrics
+    - "how am I doing?" → Use getProgressAnalytics + getAnalyticsInsights
+    
+    ANALYTICS RESPONSE FORMAT:
+    When providing analytics, respond with:
+    "Here's your comprehensive training analytics for the last [timeframe]:
+    
+    **Training Analytics:**
+    - Timeframe: [timeframe]
+    - Data Points: [X] assessments, [Y] journal entries
+    - Available Metrics: [list of metrics included]
+    
+    [The structured analytics data will be parsed by the frontend and rendered as beautiful charts]
+    
+    [Provide AI insights and coaching recommendations based on the data]"
+    
+    SMART ANALYTICS USAGE:
+    1. Use getProgressAnalytics to fetch the raw data
+    2. Use getAnalyticsInsights to generate AI-powered recommendations
+    3. Combine both for comprehensive progress reviews
+    
+    ANALYTICS COACHING:
+    Provide specific guidance based on analytics results:
+    - Strength Trends: Comment on finger strength, pull-up, and composite score changes
+    - Grade Progression: Analyze climbing grade advancement and predictions
+    - Consistency Patterns: Highlight training frequency and adherence
+    - Volume Analysis: Review training load and session frequency
+    - Recommendations: Suggest specific improvements based on data patterns
+    
+    TIMEFRAME SELECTION:
+    Choose appropriate timeframes based on user requests:
+    - "this week" → week timeframe
+    - "this month" → month timeframe  
+    - "last 3 months" → 3months timeframe
+    - "progress over time" → 6months or year timeframe
+    - Default to "month" for general requests
+
     Remember: Be conversational and smart! Parse what users mean, not just what they say exactly. Your goal is 85% completion rate with 5-minute average time through intelligent, flexible conversation that feels natural while staying efficient.
   `,
   model: llm,
@@ -490,7 +539,11 @@ export const climbingAgent = new Agent({
     // Timer tools
     createTimer: createTimerTool,
     parseTimerRequest: parseTimerRequestTool,
-    getTimerPresets: getTimerPresetsTool
+    getTimerPresets: getTimerPresetsTool,
+    
+    // Analytics tools
+    getProgressAnalytics: getProgressAnalyticsTool,
+    getAnalyticsInsights: getAnalyticsInsightsTool
   },
   workflows: {
     simpleRetentionWorkflow

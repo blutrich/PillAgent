@@ -3,7 +3,7 @@ import { useAuth } from '../lib/auth-context'
 import { climbingPillAPI } from '../lib/mastra-client-v2'
 import ReactMarkdown from 'react-markdown'
 import AssessmentModal from './AssessmentModal'
-import { Send, Mic, User, Bot, Timer, Play, Pause, RotateCcw, CheckCircle, BarChart3, Calendar, Target, Zap, ClipboardList } from 'lucide-react'
+import { Send, Mic, User, Bot, Timer, Play, Pause, RotateCcw, CheckCircle, BarChart3, Calendar, Target, Zap, ClipboardList, Mountain, Activity } from 'lucide-react'
 
 // Rich rendering components for chat
 const ProgramChart = ({ programData }: { programData: any }) => {
@@ -362,11 +362,215 @@ const ProgressChart = ({ progress }: { progress: any }) => (
   </div>
 )
 
+const ProgressAnalytics = ({ analytics }: { analytics: any }) => (
+  <div className="bg-gray-800 rounded-lg p-6 my-4 border border-gray-700">
+    <div className="flex items-center gap-2 mb-6">
+      <BarChart3 className="w-6 h-6 text-pink-400" />
+      <h3 className="text-white font-semibold text-lg">Training Analytics</h3>
+      <div className="ml-auto bg-gray-700 px-3 py-1 rounded-full">
+        <span className="text-sm text-gray-300">{analytics.timeframe}</span>
+      </div>
+    </div>
+
+    {/* Summary Stats */}
+    <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="bg-gray-900 rounded-lg p-4 text-center">
+        <div className="text-2xl font-bold text-pink-400">{analytics.summary?.totalDataPoints || 0}</div>
+        <div className="text-sm text-gray-400">Data Points</div>
+      </div>
+      <div className="bg-gray-900 rounded-lg p-4 text-center">
+        <div className="text-2xl font-bold text-lime-400">{analytics.summary?.availableMetrics?.length || 0}</div>
+        <div className="text-sm text-gray-400">Metrics</div>
+      </div>
+      <div className="bg-gray-900 rounded-lg p-4 text-center">
+        <div className="text-2xl font-bold text-teal-400">{analytics.timeframe}</div>
+        <div className="text-sm text-gray-400">Timeframe</div>
+      </div>
+    </div>
+
+    {/* Strength Progression Chart */}
+    {analytics.strengthProgression && analytics.strengthProgression.length > 0 && (
+      <div className="mb-6">
+        <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+          <Zap className="w-4 h-4 text-pink-400" />
+          Strength Progression
+        </h4>
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="space-y-3">
+            {analytics.strengthProgression.slice(-5).map((point: any, index: number) => {
+              const date = new Date(point.date).toLocaleDateString()
+              const maxValue = Math.max(point.fingerStrength, point.pullUps * 10, point.coreStrength)
+              return (
+                <div key={index} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">{date}</span>
+                    <span className="text-white">Score: {point.compositeScore.toFixed(1)}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-gray-400">Finger</span>
+                        <span className="text-pink-400">{point.fingerStrength}kg</span>
+                      </div>
+                      <div className="bg-gray-800 rounded-full h-2">
+                        <div 
+                          className="bg-pink-400 h-2 rounded-full" 
+                          style={{ width: `${(point.fingerStrength / maxValue) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-gray-400">Pull-ups</span>
+                        <span className="text-lime-400">{point.pullUps}</span>
+                      </div>
+                      <div className="bg-gray-800 rounded-full h-2">
+                        <div 
+                          className="bg-lime-400 h-2 rounded-full" 
+                          style={{ width: `${(point.pullUps * 10 / maxValue) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-gray-400">Core</span>
+                        <span className="text-teal-400">{point.coreStrength}</span>
+                      </div>
+                      <div className="bg-gray-800 rounded-full h-2">
+                        <div 
+                          className="bg-teal-400 h-2 rounded-full" 
+                          style={{ width: `${(point.coreStrength / maxValue) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Grade Progression */}
+    {analytics.gradeProgression && analytics.gradeProgression.length > 0 && (
+      <div className="mb-6">
+        <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+          <Mountain className="w-4 h-4 text-lime-400" />
+          Grade Progression
+        </h4>
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="flex flex-wrap gap-2">
+            {analytics.gradeProgression.slice(-6).map((point: any, index: number) => {
+              const date = new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              return (
+                <div key={index} className="bg-gray-800 rounded-lg p-3 flex-1 min-w-24">
+                  <div className="text-xs text-gray-400 mb-1">{date}</div>
+                  <div className="text-sm font-medium text-white">{point.predictedGrade}</div>
+                  <div className="text-xs text-gray-500">→ {point.targetGrade}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Training Consistency Heatmap */}
+    {analytics.trainingConsistency && analytics.trainingConsistency.length > 0 && (
+      <div className="mb-6">
+        <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-teal-400" />
+          Training Consistency
+        </h4>
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="grid grid-cols-4 gap-2">
+            {analytics.trainingConsistency.slice(-12).map((week: any, index: number) => {
+              const intensity = week.consistency
+              const bgColor = intensity > 0.8 ? 'bg-green-500' : 
+                            intensity > 0.6 ? 'bg-green-400' : 
+                            intensity > 0.4 ? 'bg-yellow-400' : 
+                            intensity > 0.2 ? 'bg-orange-400' : 'bg-gray-600'
+              return (
+                <div key={index} className={`${bgColor} rounded p-2 text-center`}>
+                  <div className="text-xs text-white font-medium">{week.week}</div>
+                  <div className="text-xs text-white">{week.sessions} sessions</div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-3 flex justify-between text-xs text-gray-400">
+            <span>Less</span>
+            <div className="flex gap-1">
+              <div className="w-3 h-3 bg-gray-600 rounded-sm"></div>
+              <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
+              <div className="w-3 h-3 bg-yellow-400 rounded-sm"></div>
+              <div className="w-3 h-3 bg-green-400 rounded-sm"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+            </div>
+            <span>More</span>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Training Volume */}
+    {analytics.trainingVolume && analytics.trainingVolume.length > 0 && (
+      <div className="mb-6">
+        <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-pink-400" />
+          Training Volume
+        </h4>
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="space-y-2">
+            {analytics.trainingVolume.slice(-6).map((month: any, index: number) => {
+              const maxVolume = Math.max(...analytics.trainingVolume.map((m: any) => m.volume))
+              return (
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-16 text-sm text-gray-400">{month.month}</div>
+                  <div className="flex-1 bg-gray-800 rounded-full h-3">
+                    <div 
+                      className="bg-pink-400 h-3 rounded-full flex items-center justify-end pr-2" 
+                      style={{ width: `${(month.volume / maxVolume) * 100}%` }}
+                    >
+                      <span className="text-xs text-white font-medium">{month.entries}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Assessment Summary */}
+    {analytics.assessmentSummary && (
+      <div className="bg-gray-900 rounded-lg p-4">
+        <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+          <Target className="w-4 h-4 text-lime-400" />
+          Latest Assessment
+        </h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-sm text-gray-400">Predicted Grade</div>
+            <div className="text-xl font-bold text-lime-400">{analytics.assessmentSummary.predicted_grade}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-400">Composite Score</div>
+            <div className="text-xl font-bold text-pink-400">{analytics.assessmentSummary.composite_score?.toFixed(1)}</div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
   richContent?: {
-    type: 'program' | 'timer' | 'drill' | 'schedule' | 'assessment' | 'progress'
+    type: 'program' | 'timer' | 'drill' | 'schedule' | 'assessment' | 'progress' | 'analytics'
     data: any
   }
   timestamp?: Date
@@ -549,6 +753,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       return { type: 'timer' as const, data: { duration: 90, name: 'Training Session' } }
     }
     
+    // Detect analytics content
+    if (lowerContent.includes('analytics') || lowerContent.includes('progress dashboard') || 
+        lowerContent.includes('training analytics') || lowerContent.includes('show my progress') ||
+        lowerContent.includes('progress analysis') || lowerContent.includes('training stats')) {
+      return { type: 'analytics' as const, data: null }
+    }
+    
     // Detect assessment content
     if (lowerContent.includes('assessment') || lowerContent.includes('grade prediction') || lowerContent.includes('score')) {
       return { type: 'assessment' as const, data: null }
@@ -658,6 +869,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
           console.warn('Could not fetch assessment data:', error)
         }
       }
+      
+      if (richContent?.type === 'analytics') {
+        // For now, we'll trigger the analytics tool through the AI response
+        // The analytics data will be provided by the analytics tool
+        enhancedRichContent = richContent
+      }
 
              const assistantMessage: Message = {
          role: 'assistant',
@@ -701,6 +918,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         return richContent.data ? <AssessmentResults assessment={richContent.data} /> : null
       case 'progress':
         return <ProgressChart progress={richContent.data} />
+      case 'analytics':
+        return richContent.data ? <ProgressAnalytics analytics={richContent.data} /> : null
       case 'drill':
         return <DrillCard drill={richContent.data} />
       default:
