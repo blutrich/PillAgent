@@ -972,31 +972,54 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       return { type: 'timer' as const, data: { duration: 90, name: 'Training Session' } }
     }
     
-    // Detect table content
+    // Detect table content - enhanced detection for various table formats
     if (lowerContent.includes('table') || lowerContent.includes('schedule') || 
         lowerContent.includes('summarizing') || lowerContent.includes('| day |') ||
         lowerContent.includes('|---') || lowerContent.includes('monday |') ||
         lowerContent.includes('tuesday |') || lowerContent.includes('wednesday |') ||
         lowerContent.includes('thursday |') || lowerContent.includes('friday |') ||
-        lowerContent.includes('saturday |') || lowerContent.includes('sunday |')) {
+        lowerContent.includes('saturday |') || lowerContent.includes('sunday |') ||
+        // Enhanced detection for training program tables
+        (lowerContent.includes('|') && (
+          lowerContent.includes('session type') || 
+          lowerContent.includes('duration') || 
+          lowerContent.includes('intensity') ||
+          lowerContent.includes('exercises') ||
+          lowerContent.includes('fingerboard') ||
+          lowerContent.includes('boulder') ||
+          lowerContent.includes('technical')
+        ))) {
       
-      // Try to parse table data from the content
+      // Try to parse table data from the content - enhanced parsing
       const sessions = []
       const lines = content.split('\n')
       
       for (const line of lines) {
         const trimmedLine = line.trim()
-        if (trimmedLine.includes('|') && !trimmedLine.includes('---') && !trimmedLine.includes('Day |')) {
-          // This looks like a table row
+        if (trimmedLine.includes('|') && !trimmedLine.includes('---') && 
+            !trimmedLine.includes('Day |') && !trimmedLine.includes('Session Type') &&
+            !trimmedLine.includes('Duration |') && !trimmedLine.includes('Intensity')) {
+          
+          // This looks like a table row with actual data
           const parts = trimmedLine.split('|').map(p => p.trim()).filter(p => p)
-          if (parts.length >= 4) {
-            sessions.push({
-              day: parts[0],
-              sessionType: parts[1],
-              duration: parts[2],
-              exercises: parts[3].replace(/<br>/g, '\n'),
-              intensity: parts[4] || 'Moderate'
-            })
+          
+          // Handle different table formats
+          if (parts.length >= 3) {
+            // Try to identify day names or session types
+            const firstPart = parts[0].toLowerCase()
+            const isDayRow = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 
+                             'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].includes(firstPart)
+            
+            if (isDayRow || parts.length >= 4) {
+              sessions.push({
+                day: parts[0],
+                sessionType: parts[1] || 'Training',
+                duration: parts[2] || '60 min',
+                exercises: (parts[3] || '').replace(/<br>/g, '\n').replace(/<br\/>/g, '\n'),
+                intensity: parts[4] || 'Moderate',
+                notes: parts[5] || ''
+              })
+            }
           }
         }
       }
