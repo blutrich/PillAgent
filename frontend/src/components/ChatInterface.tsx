@@ -1505,28 +1505,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
   // Render artifact content based on type
   const renderArtifactContent = () => {
+    console.log('🎯 Rendering artifact content:', artifact.type, artifact.data);
+    
     switch (artifact.type) {
       case 'program':
         return (
           <div className="space-y-6">
             <ProgramChart programData={artifact.data} />
+            
+            {/* Debug info */}
+            <div className="bg-gray-800/50 rounded p-3 text-xs text-gray-400">
+              <div>Debug: Program data keys: {artifact.data ? Object.keys(artifact.data).join(', ') : 'null'}</div>
+              {artifact.data?.weeks && <div>Weeks found: {artifact.data.weeks.length}</div>}
+              {artifact.data?.program_data && <div>Program data found: {typeof artifact.data.program_data}</div>}
+            </div>
+            
+            {/* Try multiple data structure formats */}
             {artifact.data?.weeks && (
               <div className="space-y-4">
                 <h4 className="text-white font-semibold text-lg">Weekly Breakdown</h4>
                 {artifact.data.weeks.map((week: any, index: number) => (
                   <div key={index} className="bg-gray-800 rounded-lg p-4">
-                    <h5 className="text-lime-400 font-medium mb-2">Week {week.weekNumber}: {week.focus}</h5>
+                    <h5 className="text-lime-400 font-medium mb-2">Week {week.weekNumber || (index + 1)}: {week.focus || week.title || 'Training Week'}</h5>
                     <div className="space-y-2">
-                      {week.sessions?.map((session: any, sessionIndex: number) => (
+                      {(week.sessions || []).map((session: any, sessionIndex: number) => (
                         <div key={sessionIndex} className="bg-gray-700/50 rounded p-3">
                           <div className="flex justify-between items-start mb-2">
-                            <span className="text-white font-medium">{session.day}</span>
-                            <span className="text-pink-400 text-sm">{session.duration}</span>
+                            <span className="text-white font-medium">{session.day || `Session ${sessionIndex + 1}`}</span>
+                            <span className="text-pink-400 text-sm">{session.duration || '90 min'}</span>
                           </div>
-                          <p className="text-gray-300 text-sm">{session.sessionType}</p>
+                          <p className="text-gray-300 text-sm">{session.sessionType || session.type || 'Training'}</p>
                           {session.exercises && (
                             <div className="mt-2 text-gray-400 text-sm">
-                              {session.exercises.split('<br>').filter((ex: string) => ex.trim()).map((exercise: string, i: number) => (
+                              {(Array.isArray(session.exercises) ? session.exercises : session.exercises.split('<br>')).filter((ex: string) => ex.trim()).map((exercise: string, i: number) => (
                                 <div key={i} className="flex items-start gap-2">
                                   <span className="text-lime-400 text-xs mt-1">•</span>
                                   <span>{exercise.replace(/^-\s*/, '').trim()}</span>
@@ -1539,6 +1550,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            
+            {/* Alternative: Try program_data structure */}
+            {!artifact.data?.weeks && artifact.data?.program_data && (
+              <div className="space-y-4">
+                <h4 className="text-white font-semibold text-lg">Program Details</h4>
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <pre className="text-gray-300 text-sm whitespace-pre-wrap">
+                    {typeof artifact.data.program_data === 'string' 
+                      ? artifact.data.program_data 
+                      : JSON.stringify(artifact.data.program_data, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+            
+            {/* Fallback: Show raw data structure */}
+            {!artifact.data?.weeks && !artifact.data?.program_data && (
+              <div className="space-y-4">
+                <h4 className="text-white font-semibold text-lg">Program Information</h4>
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <div className="text-gray-300 text-sm">
+                    <div><strong>Name:</strong> {artifact.data?.name || artifact.data?.program_name || 'ClimbingPill Training Program'}</div>
+                    <div><strong>Duration:</strong> {artifact.data?.duration || '6 weeks'}</div>
+                    <div><strong>Focus:</strong> {artifact.data?.focus || artifact.data?.focus_areas || 'Comprehensive Development'}</div>
+                    <div><strong>Target Grade:</strong> {artifact.data?.target_grade || 'Progressive'}</div>
+                    <div><strong>Status:</strong> {artifact.data?.status || 'Active'}</div>
+                  </div>
+                  
+                  {/* Show raw JSON for debugging */}
+                  <details className="mt-4">
+                    <summary className="text-teal-400 cursor-pointer text-xs">Show Raw Data</summary>
+                    <pre className="text-gray-400 text-xs mt-2 whitespace-pre-wrap bg-gray-900 p-2 rounded">
+                      {JSON.stringify(artifact.data, null, 2)}
+                    </pre>
+                  </details>
+                </div>
               </div>
             )}
           </div>
