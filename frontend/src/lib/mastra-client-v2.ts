@@ -22,26 +22,30 @@ export const climbingPillAPI = {
   // Get latest assessment data directly from Supabase
   async getLatestAssessment(userId: string) {
     try {
+      console.log('💾 V3 API: getLatestAssessment - Querying for user:', userId);
+      
+      // Get multiple assessments for progression display
       const { data, error } = await supabase
         .from('assessments')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(5); // Get last 5 assessments for progression chart
 
       if (error) {
-        console.log('No assessment found for user:', userId);
+        console.error('🔥 V3 API: getLatestAssessment - Supabase error:', error);
         return null;
       }
 
       if (!data || data.length === 0) {
-        console.log('No assessment found for user:', userId);
+        console.log('📭 V3 API: No assessments found for user:', userId);
         return null;
       }
 
-      return data[0]; // Get first item from array
+      console.log('✅ V3 API: Found', data.length, 'assessments for user');
+      return data; // Return array of assessments for progression display
     } catch (error) {
-      console.error('Error getting latest assessment:', error);
+      console.error('❌ V3 API: Error getting latest assessment:', error);
       return null;
     }
   },
@@ -163,11 +167,11 @@ export const climbingPillAPI = {
           currentProgram: programData?.detailedProgram,
           programName: programData?.name,
           currentWeek: programData?.currentWeek,
-          assessmentData: assessmentData ? {
-            predictedGrade: assessmentData.predicted_grade,
-            compositeScore: assessmentData.composite_score,
-            currentGrade: assessmentData.current_grade,
-            targetGrade: assessmentData.target_grade
+          assessmentData: assessmentData && assessmentData.length > 0 ? {
+            predictedGrade: assessmentData[0].predicted_grade,
+            compositeScore: assessmentData[0].composite_score,
+            currentGrade: assessmentData[0].current_grade,
+            targetGrade: assessmentData[0].target_grade
           } : null
         };
         contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
@@ -348,8 +352,8 @@ export const climbingPillAPI = {
       }
       
       // If no program but has assessment, suggest program generation
-      if (assessment) {
-        const grade = assessment.predicted_grade || "V4";
+      if (assessment && assessment.length > 0) {
+        const grade = assessment[0].predicted_grade || "V4";
         return {
           name: `${grade} Development Program`,
           currentWeek: 1,

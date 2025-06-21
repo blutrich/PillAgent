@@ -384,42 +384,134 @@ const WeeklySchedule = ({ week }: { week: any }) => (
   </div>
 )
 
-const AssessmentResults = ({ assessment }: { assessment: any }) => (
-  <div className="bg-gray-800 rounded-lg p-4 my-4">
-    <div className="flex items-center gap-2 mb-3">
-      <Target className="w-5 h-5 text-pink-400" />
-      <h3 className="text-white font-medium">Assessment Results</h3>
-    </div>
-    <div className="grid grid-cols-2 gap-4">
-      <div className="text-center">
-        <div className="text-2xl font-bold text-pink-400">
-          {assessment.predicted_grade || assessment.predictedGrade}
+const AssessmentResults = ({ assessment }: { assessment: any }) => {
+  // Handle both single assessment and multiple assessments
+  const assessments = Array.isArray(assessment) ? assessment : [assessment];
+  const latest = assessments[0];
+  
+  if (!latest) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-6 my-4 border border-gray-700">
+        <div className="flex items-center gap-2 mb-4">
+          <Target className="w-6 h-6 text-pink-400" />
+          <h3 className="text-white font-semibold text-lg">Assessment Results</h3>
         </div>
-        <div className="text-xs text-gray-400">Predicted Grade</div>
-      </div>
-      <div className="text-center">
-        <div className="text-2xl font-bold text-lime-400">
-          {Math.round(assessment.composite_score || assessment.compositeScore || 0)}
+        <div className="text-center py-8">
+          <Target className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+          <div className="text-gray-400 mb-4">No assessment data available</div>
+          <button className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-lg transition-colors">
+            Take Your First Assessment
+          </button>
         </div>
-        <div className="text-xs text-gray-400">Composite Score</div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="bg-gray-800 rounded-lg p-6 my-4 border border-gray-700">
+      <div className="flex items-center gap-2 mb-6">
+        <Target className="w-6 h-6 text-pink-400" />
+        <h3 className="text-white font-semibold text-lg">Assessment Results</h3>
+        <div className="ml-auto bg-pink-500/20 px-3 py-1 rounded-full">
+          <span className="text-sm text-pink-300">{latest.predicted_grade || 'V4'}</span>
+        </div>
+      </div>
+      
+      {/* Current Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gray-900 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-pink-400">{parseFloat(latest.composite_score || 0).toFixed(2)}</div>
+          <div className="text-sm text-gray-400">Composite Score</div>
+        </div>
+        <div className="bg-gray-900 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-lime-400">{latest.fingerboard_max_weight_kg || '0'}kg</div>
+          <div className="text-sm text-gray-400">Max Weight</div>
+        </div>
+        <div className="bg-gray-900 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-teal-400">{latest.pull_ups_max || '0'}</div>
+          <div className="text-sm text-gray-400">Pull-ups</div>
+        </div>
+        <div className="bg-gray-900 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-purple-400">{parseFloat(latest.flexibility_score || 0).toFixed(1)}</div>
+          <div className="text-sm text-gray-400">Flexibility</div>
+        </div>
+      </div>
+      
+      {/* Progress Chart for Multiple Assessments */}
+      {assessments.length > 1 && (
+        <div className="mb-6">
+          <div className="text-white font-medium mb-3">Progress Over Time</div>
+          <div className="bg-gray-900 rounded-lg p-4">
+            <div className="flex items-end space-x-2 h-32">
+              {assessments.slice(0, 5).reverse().map((assess, index) => {
+                const height = Math.max(parseFloat(assess.composite_score || 0) * 300, 20);
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center">
+                    <div 
+                      className="bg-gradient-to-t from-pink-500 to-pink-300 rounded-t-sm min-h-[20px] w-8 transition-all duration-300"
+                      style={{ height: `${height}px` }}
+                    />
+                    <div className="text-xs text-gray-400 mt-2">
+                      {new Date(assess.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-xs text-gray-500 mt-2 text-center">Composite Score Progress</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Grade Progression */}
+      <div className="mb-6">
+        <div className="text-white font-medium mb-3">Climbing Grades</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-900 rounded-lg p-4">
+            <div className="text-sm text-gray-400 mb-1">Current Boulder</div>
+            <div className="text-lg font-bold text-lime-400">{latest.current_boulder_grade || 'Not set'}</div>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-4">
+            <div className="text-sm text-gray-400 mb-1">Predicted Grade</div>
+            <div className="text-lg font-bold text-pink-400">{latest.predicted_grade || 'V4'}</div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Weaknesses & Recommendations */}
+      <div className="space-y-3">
+        <div className="text-white font-medium">Primary Focus Areas:</div>
+        <div className="bg-gray-700/50 rounded-lg p-4">
+          {latest.primary_weaknesses && latest.primary_weaknesses.length > 0 ? (
+            <div className="space-y-2">
+              {latest.primary_weaknesses.map((weakness: string, index: number) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-pink-400 rounded-full" />
+                  <span className="text-gray-300 text-sm">{weakness}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-gray-300 text-sm">
+              Continue with balanced training focusing on strength and technique development.
+            </div>
+          )}
+        </div>
+        
+        {latest.recommended_focus_areas && latest.recommended_focus_areas.length > 0 && (
+          <div className="bg-gray-700/30 rounded-lg p-4">
+            <div className="text-sm text-gray-400 mb-2">Specific Recommendations:</div>
+            <div className="space-y-1">
+              {latest.recommended_focus_areas.slice(0, 3).map((rec: string, index: number) => (
+                <div key={index} className="text-xs text-gray-300">• {rec}</div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
-    <div className="mt-4 space-y-2">
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-400">Finger Strength</span>
-        <span className="text-white">{assessment.finger_strength_score || 'N/A'}</span>
-      </div>
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-400">Pull-up Score</span>
-        <span className="text-white">{assessment.pullup_score || 'N/A'}</span>
-      </div>
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-400">Core Strength</span>
-        <span className="text-white">{assessment.core_score || 'N/A'}</span>
-      </div>
-    </div>
-  </div>
-)
+  );
+}
 
 const ProgressChart = ({ progress }: { progress: any }) => (
   <div className="bg-gray-800 rounded-lg p-4 my-4">
