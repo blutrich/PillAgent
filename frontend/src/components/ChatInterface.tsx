@@ -28,6 +28,88 @@ const ProgramChart = ({ programData }: { programData: any }) => {
   )
 }
 
+const ProgramTable = ({ tableData }: { tableData: any }) => {
+  if (!tableData) return null
+  
+  return (
+    <div className="bg-gray-800 rounded-lg p-4 my-4">
+      <div className="flex items-center gap-2 mb-4">
+        <ClipboardList className="w-5 h-5 text-pink-400" />
+        <h3 className="text-white font-medium">Weekly Training Schedule</h3>
+      </div>
+      
+      {/* Mobile-first design: Cards instead of table */}
+      <div className="space-y-3">
+        {tableData.sessions?.map((session: any, index: number) => (
+          <div key={index} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/30">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-pink-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-pink-400 font-bold text-sm">
+                    {session.day?.charAt(0)?.toUpperCase() || (index + 1)}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-white font-semibold text-base">
+                    {session.day || `Day ${index + 1}`}
+                  </h4>
+                  <p className="text-gray-400 text-sm">
+                    {session.sessionType || 'Training Session'}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-pink-400 font-bold text-lg">
+                  {session.duration || '90 min'}
+                </div>
+                <div className="text-gray-400 text-sm">
+                  {session.intensity ? `RPE ${session.intensity}` : 'Moderate'}
+                </div>
+              </div>
+            </div>
+            
+            {session.exercises && (
+              <div className="mt-3">
+                <h5 className="text-gray-300 font-medium text-sm mb-2 flex items-center gap-1">
+                  <Target className="w-4 h-4" />
+                  Exercises:
+                </h5>
+                <div className="space-y-2">
+                  {session.exercises.split('<br>').filter((ex: string) => ex.trim()).map((exercise: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="text-gray-300 text-sm leading-relaxed min-w-0 flex-1">
+                        {exercise.replace(/^-\s*/, '').trim()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )) || (
+          // Fallback for when we just have text content
+          <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/30">
+            <div className="text-gray-300 text-sm leading-relaxed">
+              {tableData.content || 'Training schedule details will appear here.'}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Show total sessions count */}
+      {tableData.sessions?.length && (
+        <div className="mt-4 pt-3 border-t border-gray-600/30">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Total Sessions</span>
+            <span className="text-lime-400 font-medium">{tableData.sessions.length} sessions</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const SessionTimer = ({ session }: { session: any }) => {
   // Handle both interval and duration timers
   const isIntervalTimer = session?.workTime && session?.restTime && session?.rounds
@@ -570,7 +652,7 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   richContent?: {
-    type: 'program' | 'timer' | 'drill' | 'schedule' | 'assessment' | 'progress' | 'analytics'
+    type: 'program' | 'timer' | 'drill' | 'schedule' | 'assessment' | 'progress' | 'analytics' | 'table'
     data: any
   }
   timestamp?: Date
@@ -753,6 +835,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       return { type: 'timer' as const, data: { duration: 90, name: 'Training Session' } }
     }
     
+    // Detect table content
+    if (lowerContent.includes('table') || lowerContent.includes('schedule') || 
+        lowerContent.includes('summarizing') || lowerContent.includes('| day |') ||
+        lowerContent.includes('|---') || lowerContent.includes('monday |') ||
+        lowerContent.includes('tuesday |') || lowerContent.includes('wednesday |') ||
+        lowerContent.includes('thursday |') || lowerContent.includes('friday |') ||
+        lowerContent.includes('saturday |') || lowerContent.includes('sunday |')) {
+      
+      // Try to parse table data from the content
+      const sessions = []
+      const lines = content.split('\n')
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (trimmedLine.includes('|') && !trimmedLine.includes('---') && !trimmedLine.includes('Day |')) {
+          // This looks like a table row
+          const parts = trimmedLine.split('|').map(p => p.trim()).filter(p => p)
+          if (parts.length >= 4) {
+            sessions.push({
+              day: parts[0],
+              sessionType: parts[1],
+              duration: parts[2],
+              exercises: parts[3].replace(/<br>/g, '\n'),
+              intensity: parts[4] || 'Moderate'
+            })
+          }
+        }
+      }
+      
+      return { 
+        type: 'table' as const, 
+        data: { 
+          sessions: sessions.length > 0 ? sessions : null,
+          content: sessions.length === 0 ? content : null
+        } 
+      }
+    }
+    
     // Detect analytics content
     if (lowerContent.includes('analytics') || lowerContent.includes('progress dashboard') || 
         lowerContent.includes('training analytics') || lowerContent.includes('show my progress') ||
@@ -922,6 +1042,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         return richContent.data ? <ProgressAnalytics analytics={richContent.data} /> : null
       case 'drill':
         return <DrillCard drill={richContent.data} />
+      case 'table':
+        return <ProgramTable tableData={richContent.data} />
       default:
         return null
     }
