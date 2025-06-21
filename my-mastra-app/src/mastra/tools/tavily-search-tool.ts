@@ -132,7 +132,7 @@ export const tavilySearchTool = createTool({
       score: result.score,
     }));
 
-    // Create a summary of the search results
+    // Create a rich summary that the frontend can parse for clickable links
     let summary = `Found ${formattedResults.length} results for "${context.query}"`;
     
     if (searchResponse.answer) {
@@ -144,15 +144,32 @@ export const tavilySearchTool = createTool({
       formattedResults.slice(0, 3).forEach((result, index) => {
         summary += `\n${index + 1}. ${result.title} - ${result.url}`;
       });
+      
+      // Add a note about more results being available
+      if (formattedResults.length > 3) {
+        summary += `\n\n📋 View all ${formattedResults.length} results with clickable links in the sidebar →`;
+      }
     }
 
     console.log(`✅ Tavily search completed in ${searchResponse.response_time}s, found ${formattedResults.length} results`);
+
+    // Include structured data for rich frontend rendering
+    const structuredData = {
+      query: searchResponse.query,
+      answer: searchResponse.answer,
+      results: formattedResults,
+      source_count: formattedResults.length,
+      response_time: searchResponse.response_time,
+    };
+
+    // Append structured data as JSON for frontend parsing
+    const enhancedSummary = summary + `\n\n<!-- SEARCH_DATA: ${JSON.stringify(structuredData)} -->`;
 
     return {
       query: searchResponse.query,
       answer: searchResponse.answer,
       results: formattedResults,
-      summary,
+      summary: enhancedSummary,
       source_count: formattedResults.length,
       response_time: searchResponse.response_time,
     };

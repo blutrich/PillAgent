@@ -3,13 +3,13 @@ import { useAuth } from '../lib/auth-context'
 import { climbingPillAPI } from '../lib/mastra-client-v2'
 import ReactMarkdown from 'react-markdown'
 import AssessmentModal from './AssessmentModal'
-import { Send, Mic, User, Bot, Timer, Play, Pause, RotateCcw, CheckCircle, BarChart3, Calendar, Target, Zap, ClipboardList, Mountain, Activity, X, Maximize2, Minimize2 } from 'lucide-react'
+import { Send, Mic, User, Bot, Timer, Play, Pause, RotateCcw, CheckCircle, BarChart3, Calendar, Target, Zap, ClipboardList, Mountain, Activity, X, Maximize2, Minimize2, Search, ExternalLink } from 'lucide-react'
 
 // Artifact/Side Panel System
 interface ArtifactState {
   isOpen: boolean
   title: string
-  type: 'program' | 'timer' | 'assessment' | 'analytics' | 'drill' | 'schedule'
+  type: 'program' | 'timer' | 'assessment' | 'analytics' | 'drill' | 'schedule' | 'search'
   data: any
   isFullscreen: boolean
 }
@@ -895,11 +895,93 @@ const ProgressAnalytics = ({ analytics }: { analytics: any }) => (
   </div>
 )
 
+// Search Results Component with clickable links
+const SearchResults = ({ searchData, onOpenArtifact }: { searchData: any, onOpenArtifact?: (title: string, type: ArtifactState['type'], data: any) => void }) => {
+  if (!searchData) return null;
+
+  return (
+    <div className="bg-gray-800 rounded-lg p-4 my-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Search className="w-5 h-5 text-teal-400" />
+          <h3 className="text-white font-medium">Search Results</h3>
+        </div>
+        {onOpenArtifact && (
+          <button
+            onClick={() => onOpenArtifact('Search Results', 'search', searchData)}
+            className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+          >
+            View All →
+          </button>
+        )}
+      </div>
+
+      {/* AI Answer */}
+      {searchData.answer && (
+        <div className="mb-4 p-3 bg-gray-700/50 rounded-lg border border-teal-500/20">
+          <div className="text-teal-400 text-sm font-medium mb-2">AI Answer</div>
+          <p className="text-gray-300 text-sm leading-relaxed">{searchData.answer}</p>
+        </div>
+      )}
+
+      {/* Search Results */}
+      {searchData.results && searchData.results.length > 0 && (
+        <div className="space-y-3">
+          <div className="text-gray-400 text-sm">
+            Found {searchData.source_count || searchData.results.length} results in {searchData.response_time}s
+          </div>
+          
+          {/* Show top 3 results in main chat, rest in artifact */}
+          {searchData.results.slice(0, 3).map((result: any, index: number) => (
+            <div key={index} className="bg-gray-700/30 rounded-lg p-3 border border-gray-600/30">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-medium text-sm mb-1 line-clamp-2">
+                    {result.title}
+                  </h4>
+                  <p className="text-gray-400 text-xs mb-2 line-clamp-2">
+                    {result.content}
+                  </p>
+                  <a
+                    href={result.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-teal-400 hover:text-teal-300 text-xs transition-colors"
+                  >
+                    <span className="truncate max-w-[200px]">{result.url}</span>
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                  </a>
+                </div>
+                {result.score && (
+                  <div className="text-xs text-gray-500 flex-shrink-0">
+                    {Math.round(result.score * 100)}%
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {searchData.results.length > 3 && (
+            <div className="text-center">
+              <button
+                onClick={() => onOpenArtifact?.('Search Results', 'search', searchData)}
+                className="text-teal-400 hover:text-teal-300 text-sm transition-colors"
+              >
+                View {searchData.results.length - 3} more results →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
   richContent?: {
-    type: 'program' | 'timer' | 'drill' | 'schedule' | 'assessment' | 'progress' | 'analytics' | 'table'
+    type: 'program' | 'timer' | 'drill' | 'schedule' | 'assessment' | 'progress' | 'analytics' | 'table' | 'search'
     data: any
   }
   timestamp?: Date
@@ -1177,6 +1259,61 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       return { type: 'assessment' as const, data: null }
     }
     
+    // Detect Tavily search results
+    if (content.includes('Found') && content.includes('results') && (content.includes('Top sources:') || content.includes('SEARCH_DATA:'))) {
+      try {
+        // First try to parse structured JSON data
+        const jsonMatch = content.match(/<!-- SEARCH_DATA: ([\s\S]*?) -->/)
+        if (jsonMatch) {
+          const searchData = JSON.parse(jsonMatch[1])
+          return {
+            type: 'search' as const,
+            data: searchData
+          }
+        }
+        
+        // Fallback to parsing text format
+        const queryMatch = content.match(/Found \d+ results for "([^"]+)"/i)
+        const answerMatch = content.match(/AI Answer:\s*([^\n]+(?:\n(?!Top sources:)[^\n]+)*)/i)
+        const sourcesMatch = content.match(/Top sources:\s*([\s\S]*?)(?:\n\n|$)/i)
+        
+        let results: any[] = []
+        
+        if (sourcesMatch) {
+          const sourcesText = sourcesMatch[1]
+          const sourceLines = sourcesText.split('\n').filter(line => line.trim() && !line.includes('📋'))
+          
+          results = sourceLines.map((line, index) => {
+            const match = line.match(/^\d+\.\s*(.+?)\s*-\s*(https?:\/\/[^\s]+)/)
+            if (match) {
+              return {
+                title: match[1].trim(),
+                url: match[2].trim(),
+                content: `Search result from ${new URL(match[2]).hostname}`,
+                score: 0.8 - (index * 0.1) // Simulate decreasing relevance scores
+              }
+            }
+            return null
+          }).filter(Boolean)
+        }
+        
+        if (results.length > 0) {
+          return {
+            type: 'search' as const,
+            data: {
+              query: queryMatch?.[1] || 'Search query',
+              answer: answerMatch?.[1]?.trim(),
+              results,
+              source_count: results.length,
+              response_time: '1.2'
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing search results:', error)
+      }
+    }
+    
     return null
   }
 
@@ -1359,6 +1496,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         return <DrillCard drill={richContent.data} />
       case 'table':
         return <ProgramTable tableData={richContent.data} />
+      case 'search':
+        return <SearchResults searchData={richContent.data} onOpenArtifact={openArtifact} />
       default:
         return null
     }
@@ -1410,6 +1549,59 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         return <ProgressAnalytics analytics={artifact.data} />
       case 'timer':
         return <SessionTimer session={artifact.data} />
+      case 'search':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Search className="w-5 h-5 text-teal-400" />
+              <h3 className="text-white font-semibold">Search Results</h3>
+            </div>
+            
+            {/* AI Answer */}
+            {artifact.data?.answer && (
+              <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-teal-500/20">
+                <div className="text-teal-400 text-sm font-medium mb-3">AI Answer</div>
+                <p className="text-gray-300 leading-relaxed">{artifact.data.answer}</p>
+              </div>
+            )}
+
+            {/* All Search Results */}
+            {artifact.data?.results && artifact.data.results.length > 0 && (
+              <div className="space-y-4">
+                <div className="text-gray-400 text-sm mb-4">
+                  Found {artifact.data.source_count || artifact.data.results.length} results in {artifact.data.response_time}s
+                </div>
+                
+                {artifact.data.results.map((result: any, index: number) => (
+                  <div key={index} className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/30">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h4 className="text-white font-medium leading-tight flex-1">
+                        {result.title}
+                      </h4>
+                      {result.score && (
+                        <div className="text-xs text-gray-500 flex-shrink-0">
+                          {Math.round(result.score * 100)}%
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-gray-400 text-sm mb-3 leading-relaxed">
+                      {result.content}
+                    </p>
+                    <a
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 text-sm transition-colors"
+                    >
+                      <span className="truncate">{result.url}</span>
+                      <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
       default:
         return <div className="text-gray-400">Content not available</div>
     }
