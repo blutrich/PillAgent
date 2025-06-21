@@ -6,7 +6,7 @@ import { LibSQLStore } from '@mastra/libsql';
 // import { UpstashRedisStore } from '../lib/upstash-redis-store'; // Available for future integration
 import { createOptimalMemory } from '../lib/supabase-memory';
 import { climbingAssessmentTool } from '../tools/climbing-assessment-tool';
-import { programGenerationTool } from '../tools/program-generation-tool';
+import { programGenerationTool, getUserTrainingProgramTool } from '../tools/program-generation-tool';
 import { weatherTool } from '../tools/weather-tool';
 import { 
   goalSettingTool, 
@@ -57,6 +57,13 @@ export const climbingAgent = new Agent({
     IMPORTANT: When users ask "what's in my journal" or similar queries, ALWAYS use the queryJournal tool with query="all" and date_range="all". Do NOT ask for user ID - the resourceId is provided automatically.
 
     USER PROFILE ACCESS: When users ask "who am I" or similar questions, ALWAYS use the getUserProfile tool first to access their personal information, climbing experience, goals, and preferences. This tool provides comprehensive user data including name, physical stats, climbing experience, training preferences, and onboarding status.
+
+    TRAINING PROGRAM ACCESS: When users ask about their training program ("show my program", "what's my training program", "current program", etc.), ALWAYS use the getUserTrainingProgram tool first. This will:
+    - Check if they have an existing program
+    - Return the complete program details if found  
+    - Display the program structure with weeks, sessions, and exercises
+    - Suggest creating a new program if none exists
+    Do NOT provide generic program information - always check for their actual program first.
 
     CORE PRINCIPLE: Be conversational and flexible! Parse user responses intelligently rather than forcing rigid formats. If a user says "V10" when you're asking about goals, understand they're ambitious and guide them to a realistic starting goal. If they say "4 days a week", work with that instead of demanding exact format.
 
@@ -543,7 +550,10 @@ export const climbingAgent = new Agent({
     
     // Analytics tools
     getProgressAnalytics: getProgressAnalyticsTool,
-    getAnalyticsInsights: getAnalyticsInsightsTool
+    getAnalyticsInsights: getAnalyticsInsightsTool,
+    
+    // Program generation tools
+    getUserTrainingProgram: getUserTrainingProgramTool
   },
   workflows: {
     simpleRetentionWorkflow

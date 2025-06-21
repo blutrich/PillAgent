@@ -59,7 +59,7 @@ export const climbingPillAPI = {
       // Ultra-aggressive approach: 2-second timeout max, immediate fallback
       const queryPromise = supabase
         .from('training_programs')
-        .select('id, user_id, program_name, created_at, status')  // Minimal fields only
+        .select('id, user_id, program_name, program_data, created_at, status, target_grade, focus_areas')  // Include program_data and other important fields
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -78,6 +78,8 @@ export const climbingPillAPI = {
       }
 
       console.log('✅ V3 API: Found program quickly:', data.program_name);
+      console.log('📊 V3 API: Program has data:', !!data.program_data);
+      
       return data;
       
     } catch (error) {

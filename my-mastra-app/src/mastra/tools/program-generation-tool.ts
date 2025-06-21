@@ -397,10 +397,16 @@ export const programGenerationTool = createTool({
             ai_insights: aiInsights,
             confidence,
             generated_at: new Date().toISOString(),
-            user_preferences: userPreferences,
-            assessment_data: assessmentResults
+            user_context: {
+              goals: userPreferences.primaryGoals,
+              available_days: userPreferences.availableDays,
+              session_length: userPreferences.sessionLengthMinutes,
+              equipment: userPreferences.equipmentAccess,
+              climbing_style: userPreferences.climbingStyle,
+              injuries: userPreferences.injuryHistory
+            }
           },
-          status: 'active' as 'active' | 'completed' | 'paused' | 'cancelled',
+          status: 'active',
           progress_percentage: 0,
           completed_sessions: 0,
           total_sessions: programData.weeks.reduce((total: number, week: any) => 
@@ -419,10 +425,9 @@ export const programGenerationTool = createTool({
         }
       } catch (error) {
         console.error('Error saving program to Supabase:', error);
-        // Continue execution - don't fail the tool if save fails
       }
 
-      return {
+       return {
         programId,
         programData,
         personalizationScore,
@@ -432,15 +437,81 @@ export const programGenerationTool = createTool({
       };
     } catch (error) {
       console.error('Program generation error:', error);
-      
+
       // Return fallback program on error
       return {
         programId,
         programData: createFallbackProgram(assessmentResults, userPreferences),
         personalizationScore,
-        requiresCoachReview: true, // Always require review on error
+        requiresCoachReview: true,
         aiInsights: ['Program generated with fallback method due to AI service error. Coach review required.'],
         confidence: 'low' as const,
+      };
+    }
+  },
+});
+
+// New tool for retrieving existing training programs
+export const getUserTrainingProgramTool = createTool({
+  id: 'get-user-training-program',
+  description: 'Retrieve the user\'s current/latest training program from the database. Use this when users ask about their existing program.',
+  inputSchema: z.object({
+    userId: z.string().describe('Unique user identifier'),
+  }),
+  outputSchema: z.object({
+    hasProgram: z.boolean().describe('Whether the user has an existing program'),
+    program: z.object({
+      id: z.string(),
+      programName: z.string(),
+      createdAt: z.string(),
+      status: z.string(),
+      targetGrade: z.string().optional(),
+      focusAreas: z.array(z.string()).optional(),
+      programData: z.any().describe('Complete program structure with weeks and sessions'),
+    }).optional(),
+    message: z.string().describe('Human-readable status message'),
+  }),
+  execute: async ({ context }) => {
+    const { userId } = context;
+
+    try {
+      console.log(`🔍 Retrieving training program for user: ${userId}`);
+      
+      // Get all programs for the user, ordered by creation date
+      const programs = await dbHelpers.getUserPrograms(userId);
+      
+      if (!programs || programs.length === 0) {
+        console.log(`📭 No training programs found for user: ${userId}`);
+        return {
+          hasProgram: false,
+          message: 'No training program found. Would you like me to generate a personalized program for you? First, let\'s do a quick assessment to create the perfect program for your goals.'
+        };
+      }
+
+      // Get the most recent program
+      const latestProgram = programs[0];
+      console.log(`✅ Found training program: ${latestProgram.program_name} (${latestProgram.status})`);
+      console.log(`📊 Program data available: ${!!latestProgram.program_data}`);
+
+      return {
+        hasProgram: true,
+        program: {
+          id: latestProgram.id,
+          programName: latestProgram.program_name,
+          createdAt: latestProgram.created_at || new Date().toISOString(),
+          status: latestProgram.status || 'active',
+          targetGrade: latestProgram.target_grade,
+          focusAreas: latestProgram.focus_areas || [],
+          programData: latestProgram.program_data,
+        },
+        message: `Found your ${latestProgram.program_name}! It's a ${latestProgram.target_grade || 'personalized'} training program with ${latestProgram.focus_areas?.length || 0} focus areas.`
+      };
+
+    } catch (error) {
+      console.error('Error retrieving training program:', error);
+      return {
+        hasProgram: false,
+        message: 'I encountered an error while retrieving your training program. Please try again or let me know if you\'d like to generate a new program.'
       };
     }
   },
