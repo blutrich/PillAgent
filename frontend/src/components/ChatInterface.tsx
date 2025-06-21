@@ -15,11 +15,11 @@ const ProgramChart = ({ programData }: { programData: any }) => {
         <BarChart3 className="w-5 h-5 text-lime-400" />
         <h3 className="text-white font-medium">Training Program Overview</h3>
       </div>
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         {programData.weeks.map((week: any, index: number) => (
-          <div key={index} className="bg-gray-700 rounded p-2 text-center">
-            <div className="text-xs text-gray-400">Week {week.weekNumber}</div>
-            <div className="text-sm text-white font-medium">{week.focus}</div>
+          <div key={index} className="bg-gray-700 rounded p-2 text-center min-w-0">
+            <div className="text-xs text-gray-400 truncate">Week {week.weekNumber}</div>
+            <div className="text-xs sm:text-sm text-white font-medium truncate">{week.focus}</div>
             <div className="text-xs text-lime-400">{week.sessions?.length || 0} sessions</div>
           </div>
         ))}
@@ -1321,24 +1321,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
   )
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className="flex flex-col h-screen bg-black w-full max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <div className="flex items-center gap-3">
-          <img src="/climbingpill-logo.svg" alt="ClimbingPill" className="h-8" />
-          <div>
-            <h1 className="text-white font-semibold">ClimbingPill AI Coach</h1>
-            <p className="text-gray-400 text-sm">Your personal climbing training assistant</p>
+      <div className="flex items-center justify-between p-4 border-b border-gray-800 w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <img src="/climbingpill-logo.svg" alt="ClimbingPill" className="h-8 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-white font-semibold text-sm sm:text-base truncate">ClimbingPill AI Coach</h1>
+            <p className="text-gray-400 text-xs sm:text-sm truncate">Your personal climbing training assistant</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-          <span className="text-sm text-gray-400">Online</span>
+          <span className="text-xs sm:text-sm text-gray-400">Online</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 w-full max-w-full">
         {messages.map((message, index) => renderMessage(message, index))}
         
         {/* Quick Actions */}
@@ -1386,16 +1386,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center gap-3 bg-gray-800 rounded-full px-4 py-2">
+      <div className="p-4 border-t border-gray-800 w-full max-w-full">
+        <div className="flex items-center gap-3 bg-gray-800 rounded-full px-4 py-2 w-full max-w-full">
           <input
             ref={inputRef}
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about training, programs, assessments, or anything climbing..."
-            className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none"
+            placeholder="Ask about training, programs, assessments..."
+            className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none min-w-0 text-sm sm:text-base"
             disabled={isTyping}
           />
           <button
