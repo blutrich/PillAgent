@@ -524,9 +524,9 @@ export const climbingPillAPI = {
   // Conduct physical assessment
   async conductAssessment(assessmentData: Record<string, unknown>) {
     try {
-      // Convert string values to numbers for the backend tool
+      // ✅ FIXED: Only pass raw measurement data - backend calculates all scores
       const structuredData = {
-        userId: assessmentData.userId || 'anonymous', // Use real user ID from assessment data
+        userId: assessmentData.userId || 'anonymous',
         bodyWeight: parseFloat(assessmentData.bodyWeight as string),
         height: parseFloat(assessmentData.height as string),
         addedWeight: parseFloat(assessmentData.addedWeight as string),
@@ -534,18 +534,15 @@ export const climbingPillAPI = {
         maxPushUps: parseFloat(assessmentData.pushUpsMax as string),
         maxToeToBar: parseFloat(assessmentData.toeToBarMax as string),
         legSpreadDistance: parseFloat(assessmentData.legSpread as string),
-        eightyPercentGrade: assessmentData.currentGrade as string, // Fix: Use currentGrade from frontend
+        eightyPercentGrade: assessmentData.currentGrade as string,
         assessmentType: 'complete' as const,
         climberName: 'ClimbingPill User',
-        // Additional context from frontend
+        // ❌ REMOVED: Frontend calculations (compositeScore, predictedGrade, normalizedMetrics)
+        // Backend climbing-assessment-tool.ts handles all calculations using correct methodology
+        // Additional context for program generation
         currentGrade: assessmentData.currentGrade as string,
         targetGrade: assessmentData.targetGrade as string,
-        experience: assessmentData.experience as string,
-        compositeScore: assessmentData.compositeScore as string,
-        predictedGrade: assessmentData.predictedGrade as string,
-        normalizedMetrics: assessmentData.normalizedMetrics,
-        assessmentMethodology: assessmentData.assessmentMethodology as string,
-        timestamp: assessmentData.timestamp as string
+        experience: assessmentData.experience as string
       };
 
       console.log('Making API call to:', `${MASTRA_API_BASE}/agents/climbingPillAgent/generate`);

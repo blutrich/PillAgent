@@ -1318,21 +1318,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
   }
 
   // Handle assessment completion
-  const handleAssessmentComplete = async (assessmentData: any) => {
+  const handleAssessmentComplete = async (assessmentResult: any) => {
+    // ✅ FIXED: Use backend assessment result instead of frontend calculation
+    const predictedGrade = assessmentResult?.predictedGrade || 'V4'
+    const compositeScore = assessmentResult?.compositeScore || 0
+    
     setMessages(prev => [...prev, {
       role: 'assistant',
-      content: `Great! I've completed your assessment. Your predicted grade is **${assessmentData.predictedGrade}** with a composite score of **${assessmentData.compositeScore.toFixed(2)}**.\n\nNow I'll generate your personalized training program. This may take a moment...`,
-      richContent: { type: 'assessment', data: assessmentData },
+      content: `Great! I've completed your assessment. Your predicted grade is **${predictedGrade}** with a composite score of **${compositeScore.toFixed(2)}**.\n\nNow I'll generate your personalized training program. This may take a moment...`,
+      richContent: { type: 'assessment', data: assessmentResult },
       timestamp: new Date()
     }])
 
     // Generate training program
     try {
-      const programResponse = await climbingPillAPI.generateProgram(assessmentData)
+      const programResponse = await climbingPillAPI.generateProgram(assessmentResult)
       
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `🎉 Your personalized training program is ready! This 6-week program is designed to help you progress from ${assessmentData.currentGrade} to ${assessmentData.targetGrade}.\n\nYour program focuses on your identified weaknesses and includes structured progression with proper deload and assessment phases.`,
+        content: `🎉 Your personalized training program is ready! This 6-week program is designed to help you progress from ${assessmentResult.currentGrade || 'your current grade'} to ${assessmentResult.targetGrade || 'your target grade'}.\n\nYour program focuses on your identified weaknesses and includes structured progression with proper deload and assessment phases.`,
         richContent: { type: 'program', data: programResponse },
         timestamp: new Date()
       }])

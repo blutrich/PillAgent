@@ -50,50 +50,16 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
     }))
   }
 
-  const calculateCompositeScore = () => {
-    const bodyWeight = parseFloat(assessmentData.bodyWeight) || 70
-    const addedWeight = parseFloat(assessmentData.addedWeight) || 0
-    const pullUps = parseInt(assessmentData.pullUpsMax) || 0
-    const pushUps = parseInt(assessmentData.pushUpsMax) || 0
-    const toeToBar = parseInt(assessmentData.toeToBarMax) || 0
-    const height = parseFloat(assessmentData.height) || 170
-    const legSpread = parseFloat(assessmentData.legSpread) || 160
-
-    const fingerStrengthRatio = (bodyWeight + addedWeight) / bodyWeight
-    const pullUpRatio = pullUps / bodyWeight * 100
-    const pushUpRatio = pushUps / bodyWeight * 100
-    const coreStrengthRatio = toeToBar / bodyWeight * 100
-    const flexibilityRatio = legSpread / height
-
-    return (
-      fingerStrengthRatio * 0.45 +
-      pullUpRatio * 0.20 +
-      pushUpRatio * 0.10 +
-      coreStrengthRatio * 0.15 +
-      flexibilityRatio * 0.10
-    )
-  }
-
-  const predictGrade = (score: number) => {
-    if (score >= 1.2) return "V12"
-    if (score >= 1.1) return "V11"
-    if (score >= 1.0) return "V10"
-    if (score >= 0.9) return "V9"
-    if (score >= 0.8) return "V8"
-    if (score >= 0.7) return "V7"
-    if (score >= 0.6) return "V6"
-    if (score >= 0.5) return "V5"
-    return "V4"
-  }
+  // ❌ REMOVED: Frontend calculations removed - all scoring handled by backend only
+  // The backend climbing-assessment-tool.ts handles all composite score calculations
+  // using the correct ClimbingPill methodology
 
   const handleSubmit = async () => {
     if (!user) return
 
     setIsSubmitting(true)
     try {
-      const compositeScore = calculateCompositeScore()
-      const predictedGrade = predictGrade(compositeScore)
-
+      // ✅ FIXED: No frontend calculations - backend handles all scoring
       const assessmentPayload = {
         userId: user.id,
         bodyWeight: parseFloat(assessmentData.bodyWeight),
@@ -109,13 +75,12 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
         availableDays: assessmentData.availableDays,
         sessionDuration: parseInt(assessmentData.sessionDuration),
         equipmentAvailable: assessmentData.equipmentAvailable,
-        trainingFocus: assessmentData.trainingFocus,
-        compositeScore,
-        predictedGrade
+        trainingFocus: assessmentData.trainingFocus
+        // ❌ REMOVED: compositeScore and predictedGrade - calculated by backend only
       }
 
-      await climbingPillAPI.conductAssessment(assessmentPayload)
-      onComplete(assessmentPayload)
+      const result = await climbingPillAPI.conductAssessment(assessmentPayload)
+      onComplete(result) // Pass backend result instead of frontend calculation
       onClose()
     } catch (error) {
       console.error('Assessment submission error:', error)
