@@ -68,9 +68,9 @@ export const climbingPillAPI = {
           .limit(1)
           .maybeSingle();
         
-        // Very short timeout for lightweight query (1.5 seconds)
+        // Increased timeout for lightweight query (5 seconds)
         const lightTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Lightweight query timeout')), 1500)
+          setTimeout(() => reject(new Error('Lightweight query timeout')), 5000)
         );
         
         const { data: lightData, error: lightError } = await Promise.race([lightQueryPromise, lightTimeoutPromise]) as any;
@@ -91,7 +91,7 @@ export const climbingPillAPI = {
           .maybeSingle();
         
         const fullTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Full query timeout')), 2500)
+          setTimeout(() => reject(new Error('Full query timeout')), 8000)
         );
         
         const { data: fullData, error: fullError } = await Promise.race([fullQueryPromise, fullTimeoutPromise]) as any;
@@ -148,7 +148,7 @@ export const climbingPillAPI = {
         
         // Race against timeout - if context takes too long, skip it
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Context timeout')), 3000)
+          setTimeout(() => reject(new Error('Context timeout')), 10000)
         );
         
         const [programData, assessmentData] = await Promise.race([
