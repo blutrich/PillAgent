@@ -17,6 +17,19 @@ import {
   getTimerPresetsTool 
 } from "./tools/timer-tool";
 
+// Authentication middleware for MCP server
+function authenticateRequest(req: any): boolean {
+  const authHeader = req.headers.authorization;
+  const expectedToken = process.env.MCP_API_KEY || 'climbingpill-secure-key-2024';
+  
+  if (!authHeader) {
+    return false;
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  return token === expectedToken;
+}
+
 // Resource handlers for MCP clients to access training data
 const climbingPillResources: MCPServerResources = {
   listResources: async () => {
@@ -160,6 +173,25 @@ export async function startHTTPServer(port: number = 8080) {
   const http = require('http');
   
   const server = http.createServer(async (req: any, res: any) => {
+    // Add CORS headers for web clients
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+    
+    // Authenticate request
+    if (!authenticateRequest(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized. Please provide valid API key in Authorization header.' }));
+      return;
+    }
+    
     await climbingPillMCPServer.startHTTP({
       url: new URL(req.url || '', `http://localhost:${port}`),
       httpPath: '/mcp',
@@ -170,6 +202,7 @@ export async function startHTTPServer(port: number = 8080) {
 
   server.listen(port, () => {
     console.log(`✅ ClimbingPill MCP Server running at http://localhost:${port}/mcp`);
+    console.log(`🔑 API Key required: ${process.env.MCP_API_KEY || 'climbingpill-secure-key-2024'}`);
   });
 }
 
@@ -179,6 +212,25 @@ export async function startSSEServer(port: number = 8080) {
   const http = require('http');
   
   const server = http.createServer(async (req: any, res: any) => {
+    // Add CORS headers for web clients
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+    
+    // Authenticate request
+    if (!authenticateRequest(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized. Please provide valid API key in Authorization header.' }));
+      return;
+    }
+    
     await climbingPillMCPServer.startSSE({
       url: new URL(req.url || '', `http://localhost:${port}`),
       ssePath: '/sse',
@@ -190,5 +242,6 @@ export async function startSSEServer(port: number = 8080) {
 
   server.listen(port, () => {
     console.log(`✅ ClimbingPill MCP Server (SSE) running at http://localhost:${port}/sse`);
+    console.log(`🔑 API Key required: ${process.env.MCP_API_KEY || 'climbingpill-secure-key-2024'}`);
   });
 } 

@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "climbingpill-ai-coach": {
+      "url": "http://localhost:8080/sse",
+      "requestInit": {
+        "headers": {
+          "Authorization": "Bearer climbingpill-secure-key-2024",
+          "Content-Type": "application/json"
+        }
+      },
+      "eventSourceInit": {
+        "fetch": "custom-fetch-with-auth"
+      },
+      "description": "ClimbingPill AI Coach with authentication for Claude.ai"
+    }
+  },
+  "instructions": {
+    "setup": [
+      "1. Start your MCP server with: npm run start:mcp-sse",
+      "2. Set environment variable MCP_API_KEY=your-secure-key",
+      "3. Configure Claude.ai to use this server with authentication",
+      "4. Use the API key: climbingpill-secure-key-2024"
+    ],
+    "claude-config": {
+      "description": "Configuration for Claude.ai MCP client",
+      "server": {
+        "name": "climbingpill-ai-coach",
+        "url": "http://localhost:8080/sse",
+        "auth": {
+          "type": "bearer",
+          "token": "climbingpill-secure-key-2024"
+        }
+      }
+    }
+  },
+  "environment": {
+    "MCP_API_KEY": "climbingpill-secure-key-2024",
+    "note": "Set this in your environment or use the default key above"
+  }
+} 

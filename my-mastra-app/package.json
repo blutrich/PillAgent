@@ -10,7 +10,9 @@
     "start": "node -r dotenv/config ./node_modules/.bin/mastra start",
     "mcp:stdio": "node -r dotenv/config start-mcp-server.ts",
     "mcp:http": "MCP_MODE=http node -r dotenv/config start-mcp-server.ts",
-    "mcp:claude": "node -r dotenv/config mcp-http-server.ts"
+    "mcp:claude": "node -r dotenv/config mcp-http-server.ts",
+    "mcp:sse": "MCP_API_KEY=climbingpill-secure-key-2024 tsx src/mastra/mcp-server.ts sse",
+    "mcp:http-auth": "MCP_API_KEY=climbingpill-secure-key-2024 tsx src/mastra/mcp-server.ts http"
   },
   "keywords": [],
   "author": "",
