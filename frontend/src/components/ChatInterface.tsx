@@ -3,17 +3,119 @@ import { useAuth } from '../lib/auth-context'
 import { climbingPillAPI } from '../lib/mastra-client-v2'
 import ReactMarkdown from 'react-markdown'
 import AssessmentModal from './AssessmentModal'
-import { Send, Mic, User, Bot, Timer, Play, Pause, RotateCcw, CheckCircle, BarChart3, Calendar, Target, Zap, ClipboardList, Mountain, Activity } from 'lucide-react'
+import { Send, Mic, User, Bot, Timer, Play, Pause, RotateCcw, CheckCircle, BarChart3, Calendar, Target, Zap, ClipboardList, Mountain, Activity, X, Maximize2, Minimize2 } from 'lucide-react'
+
+// Artifact/Side Panel System
+interface ArtifactState {
+  isOpen: boolean
+  title: string
+  type: 'program' | 'timer' | 'assessment' | 'analytics' | 'drill' | 'schedule'
+  data: any
+  isFullscreen: boolean
+}
+
+const useArtifact = () => {
+  const [artifact, setArtifact] = useState<ArtifactState>({
+    isOpen: false,
+    title: '',
+    type: 'program',
+    data: null,
+    isFullscreen: false
+  })
+
+  const openArtifact = (title: string, type: ArtifactState['type'], data: any) => {
+    setArtifact({
+      isOpen: true,
+      title,
+      type,
+      data,
+      isFullscreen: false
+    })
+  }
+
+  const closeArtifact = () => {
+    setArtifact(prev => ({ ...prev, isOpen: false }))
+  }
+
+  const toggleFullscreen = () => {
+    setArtifact(prev => ({ ...prev, isFullscreen: !prev.isFullscreen }))
+  }
+
+  return { artifact, openArtifact, closeArtifact, toggleFullscreen }
+}
+
+// Artifact Panel Component
+const ArtifactPanel: React.FC<{
+  artifact: ArtifactState
+  onClose: () => void
+  onToggleFullscreen: () => void
+  children: React.ReactNode
+}> = ({ artifact, onClose, onToggleFullscreen, children }) => {
+  if (!artifact.isOpen) return null
+
+  return (
+    <>
+      {/* Backdrop for mobile fullscreen */}
+      {artifact.isFullscreen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
+      )}
+      
+      <div className={`
+        fixed z-50 bg-gray-900 border-l border-gray-700 shadow-2xl
+        ${artifact.isFullscreen 
+          ? 'inset-0 lg:inset-y-0 lg:right-0 lg:w-1/2' 
+          : 'right-0 top-0 bottom-0 w-full lg:w-96'
+        }
+        transform transition-transform duration-300 ease-in-out
+        flex flex-col
+      `}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800">
+          <h3 className="text-white font-semibold truncate">{artifact.title}</h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleFullscreen}
+              className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              {artifact.isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-4">
+          {children}
+        </div>
+      </div>
+    </>
+  )
+}
 
 // Rich rendering components for chat
-const ProgramChart = ({ programData }: { programData: any }) => {
+const ProgramChart = ({ programData, onOpenArtifact }: { programData: any, onOpenArtifact?: (title: string, type: ArtifactState['type'], data: any) => void }) => {
   if (!programData?.weeks) return null;
   
   return (
     <div className="bg-gray-800 rounded-lg p-4 my-4 overflow-hidden">
-      <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="w-5 h-5 text-lime-400" />
-        <h3 className="text-white font-medium">Training Program Overview</h3>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-lime-400" />
+          <h3 className="text-white font-medium">Training Program Overview</h3>
+        </div>
+        {onOpenArtifact && (
+          <button
+            onClick={() => onOpenArtifact('Training Program Details', 'program', programData)}
+            className="text-sm text-lime-400 hover:text-lime-300 transition-colors"
+          >
+            View Details →
+          </button>
+        )}
       </div>
       
       {/* Mobile: Horizontal scroll with proper padding */}
@@ -823,6 +925,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
   const [showAssessmentModal, setShowAssessmentModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  
+  // Artifact system
+  const { artifact, openArtifact, closeArtifact, toggleFullscreen } = useArtifact()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -1239,7 +1344,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
     switch (richContent.type) {
       case 'program':
-        return richContent.data ? <ProgramChart programData={richContent.data} /> : null
+        return richContent.data ? <ProgramChart programData={richContent.data} onOpenArtifact={openArtifact} /> : null
       case 'timer':
         return <SessionTimer session={richContent.data} />
       case 'schedule':
@@ -1256,6 +1361,57 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         return <ProgramTable tableData={richContent.data} />
       default:
         return null
+    }
+  }
+
+  // Render artifact content based on type
+  const renderArtifactContent = () => {
+    switch (artifact.type) {
+      case 'program':
+        return (
+          <div className="space-y-6">
+            <ProgramChart programData={artifact.data} />
+            {artifact.data?.weeks && (
+              <div className="space-y-4">
+                <h4 className="text-white font-semibold text-lg">Weekly Breakdown</h4>
+                {artifact.data.weeks.map((week: any, index: number) => (
+                  <div key={index} className="bg-gray-800 rounded-lg p-4">
+                    <h5 className="text-lime-400 font-medium mb-2">Week {week.weekNumber}: {week.focus}</h5>
+                    <div className="space-y-2">
+                      {week.sessions?.map((session: any, sessionIndex: number) => (
+                        <div key={sessionIndex} className="bg-gray-700/50 rounded p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-white font-medium">{session.day}</span>
+                            <span className="text-pink-400 text-sm">{session.duration}</span>
+                          </div>
+                          <p className="text-gray-300 text-sm">{session.sessionType}</p>
+                          {session.exercises && (
+                            <div className="mt-2 text-gray-400 text-sm">
+                              {session.exercises.split('<br>').filter((ex: string) => ex.trim()).map((exercise: string, i: number) => (
+                                <div key={i} className="flex items-start gap-2">
+                                  <span className="text-lime-400 text-xs mt-1">•</span>
+                                  <span>{exercise.replace(/^-\s*/, '').trim()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      case 'assessment':
+        return <AssessmentResults assessment={artifact.data} />
+      case 'analytics':
+        return <ProgressAnalytics analytics={artifact.data} />
+      case 'timer':
+        return <SessionTimer session={artifact.data} />
+      default:
+        return <div className="text-gray-400">Content not available</div>
     }
   }
 
@@ -1309,21 +1465,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
   )
 
   return (
-    <div className="flex flex-col h-screen bg-black w-full max-w-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800 w-full max-w-full">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <img src="/climbingpill-logo.svg" alt="ClimbingPill" className="h-8 flex-shrink-0" />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-white font-semibold text-sm sm:text-base truncate">ClimbingPill AI Coach</h1>
-            <p className="text-gray-400 text-xs sm:text-sm truncate">Your personal climbing training assistant</p>
+    <>
+      <div className="flex flex-col h-screen bg-black w-full max-w-full overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-800 w-full max-w-full">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <img src="/climbingpill-logo.svg" alt="ClimbingPill" className="h-8 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-white font-semibold text-sm sm:text-base truncate">ClimbingPill AI Coach</h1>
+              <p className="text-gray-400 text-xs sm:text-sm truncate">Your personal climbing training assistant</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+            <span className="text-xs sm:text-sm text-gray-400">Online</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-          <span className="text-xs sm:text-sm text-gray-400">Online</span>
-        </div>
-      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 w-full max-w-full">
@@ -1413,13 +1570,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         </div>
       </div>
 
-      {/* Assessment Modal */}
-      <AssessmentModal
-        isOpen={showAssessmentModal}
-        onClose={() => setShowAssessmentModal(false)}
-        onComplete={handleAssessmentComplete}
-      />
-    </div>
+        {/* Assessment Modal */}
+        <AssessmentModal
+          isOpen={showAssessmentModal}
+          onClose={() => setShowAssessmentModal(false)}
+          onComplete={handleAssessmentComplete}
+        />
+      </div>
+
+      {/* Artifact Panel */}
+      <ArtifactPanel
+        artifact={artifact}
+        onClose={closeArtifact}
+        onToggleFullscreen={toggleFullscreen}
+      >
+        {renderArtifactContent()}
+      </ArtifactPanel>
+    </>
   )
 }
 
