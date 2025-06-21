@@ -24,29 +24,49 @@ export const climbingPillAPI = {
     try {
       console.log('💾 V3 API: getLatestAssessment - Ultra-fast query for user:', userId);
       
-      // Ultra-fast assessment query with 2-second timeout
+      // Ultra-fast assessment query with 5-second timeout (increased from 2s)
       const queryPromise = supabase
         .from('assessments')
-        .select('predicted_grade, composite_score, current_grade, target_grade, created_at')  // Minimal fields only
+        .select(`
+          id,
+          predicted_grade, 
+          composite_score, 
+          current_boulder_grade,
+          fingerboard_max_weight_kg,
+          pull_ups_max,
+          flexibility_score,
+          primary_weaknesses,
+          recommended_focus_areas,
+          created_at
+        `)  // Include all fields needed by the UI
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1);
 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Assessment query timeout')), 2000)
+        setTimeout(() => reject(new Error('Assessment query timeout')), 5000)
       );
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-      if (error || !data || data.length === 0) {
-        console.log('📭 V3 API: No assessment found or query timed out');
+      if (error) {
+        console.error('💾 V3 API: Assessment query error:', error);
         return null;
       }
 
-      console.log('✅ V3 API: Found assessment quickly');
+      if (!data || data.length === 0) {
+        console.log('📭 V3 API: No assessment found for user');
+        return null;
+      }
+
+      console.log('✅ V3 API: Found assessment quickly:', {
+        grade: data[0].predicted_grade,
+        score: data[0].composite_score,
+        current: data[0].current_boulder_grade
+      });
       return data; // Returns array for compatibility
     } catch (error) {
-      console.log('⚡ V3 API: Assessment ultra-fast fallback - returning null');
+      console.error('⚡ V3 API: Assessment query failed:', error);
       return null;
     }
   },
@@ -56,7 +76,7 @@ export const climbingPillAPI = {
     try {
       console.log('💾 V3 API: getLatestProgram - Ultra-fast query for user:', userId);
       
-      // Ultra-aggressive approach: 2-second timeout max, immediate fallback
+      // Increased timeout to 5 seconds for better reliability
       const queryPromise = supabase
         .from('training_programs')
         .select('id, user_id, program_name, program_data, created_at, status, target_grade, focus_areas')  // Include program_data and other important fields
@@ -65,15 +85,20 @@ export const climbingPillAPI = {
         .limit(1)
         .maybeSingle();
       
-      // Ultra-short timeout - 2 seconds max
+      // Increased timeout from 2s to 5s
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Ultra-fast timeout')), 2000)
+        setTimeout(() => reject(new Error('Program query timeout')), 5000)
       );
       
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-      if (error || !data) {
-        console.log('📭 V3 API: No program found or query timed out, returning null immediately');
+      if (error) {
+        console.error('💾 V3 API: Program query error:', error);
+        return null;
+      }
+
+      if (!data) {
+        console.log('📭 V3 API: No program found for user');
         return null;
       }
 
@@ -83,7 +108,7 @@ export const climbingPillAPI = {
       return data;
       
     } catch (error) {
-      console.log('⚡ V3 API: Ultra-fast fallback - returning null immediately');
+      console.error('⚡ V3 API: Program query failed:', error);
       return null;
     }
   },
@@ -135,7 +160,7 @@ export const climbingPillAPI = {
           assessmentData: assessmentData && assessmentData.length > 0 ? {
             predictedGrade: assessmentData[0].predicted_grade,
             compositeScore: assessmentData[0].composite_score,
-            currentGrade: assessmentData[0].current_grade,
+            currentGrade: assessmentData[0].current_boulder_grade,
             targetGrade: assessmentData[0].target_grade
           } : null
         };
@@ -260,7 +285,7 @@ export const climbingPillAPI = {
           assessmentData: assessmentData && assessmentData.length > 0 ? {
             predictedGrade: assessmentData[0].predicted_grade,
             compositeScore: assessmentData[0].composite_score,
-            currentGrade: assessmentData[0].current_grade,
+            currentGrade: assessmentData[0].current_boulder_grade,
             targetGrade: assessmentData[0].target_grade
           } : null
         };
