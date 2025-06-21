@@ -834,11 +834,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
           }
         }
       
-              // Then check for general timer requests (very restrictive for assistant responses)
-        const lowerContent = content.toLowerCase()
-        if (lowerContent.includes('session time') || 
-            lowerContent.includes('start session') ||
-            (lowerContent.includes('timer') && lowerContent.includes('start') && !lowerContent.includes('set up') && !lowerContent.includes('how'))) {
+                    // Check for simple timer requests with specific durations like "set 2 min timer"
+      const lowerContent = content.toLowerCase()
+      const simpleTimerMatch = content.match(/(?:set|start|create)\s*(\d+)\s*(min|minute|sec|second)s?\s*timer/i)
+      if (simpleTimerMatch) {
+        const [, duration, unit] = simpleTimerMatch
+        const seconds = (unit.startsWith('min')) ? parseInt(duration) * 60 : parseInt(duration)
+        return { 
+          type: 'timer' as const, 
+          data: { 
+            duration: seconds, 
+            name: `${duration} ${unit}${parseInt(duration) > 1 ? 's' : ''} Timer` 
+          } 
+        }
+      }
+      
+      // Then check for general timer requests (very restrictive for assistant responses)
+      if (lowerContent.includes('session time') || 
+          lowerContent.includes('start session') ||
+          (lowerContent.includes('timer') && lowerContent.includes('start') && !lowerContent.includes('set up') && !lowerContent.includes('how'))) {
           // Smart defaults for specific timer types
           if (lowerContent.includes('max hang') || lowerContent.includes('hangboard')) {
             return { 
@@ -905,8 +919,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
       }
     }
     
-    // Detect program-related content
-    if (lowerContent.includes('program') || lowerContent.includes('training plan') || lowerContent.includes('weeks')) {
+    // Detect program-related content (be more specific to avoid false positives)
+    if ((lowerContent.includes('program') && (lowerContent.includes('show') || lowerContent.includes('my') || lowerContent.includes('view') || lowerContent.includes('display'))) || 
+        (lowerContent.includes('training plan') && (lowerContent.includes('show') || lowerContent.includes('my') || lowerContent.includes('view'))) ||
+        lowerContent.includes('show my training') ||
+        lowerContent.includes('view my program')) {
       return { type: 'program' as const, data: null }
     }
     
