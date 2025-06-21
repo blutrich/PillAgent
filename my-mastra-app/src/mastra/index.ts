@@ -23,6 +23,10 @@ export const mastra = new Mastra({
   workflows: {
     simpleRetentionWorkflow
   },
+  // Register MCP server for Mastra Cloud dashboard visibility
+  mcpServers: {
+    climbingPillMCPServer
+  },
   storage: new LibSQLStore({
     url: 'file:./mastra-climbing.db' // Persistent file storage
   }),
@@ -60,10 +64,17 @@ export const mastra = new Mastra({
             return c.text('', 200);
           }
           
-          // For now, return basic info - we'll use separate deployment for full MCP
-          return c.json({ 
-            message: 'MCP Server endpoint - use separate deployment for full functionality',
-            redirect: 'https://your-mcp-server.railway.app/mcp' 
+          // Return MCP server info - tools are accessible via main Mastra API
+          return c.json({
+            name: 'ClimbingPill MCP Integration',
+            status: 'available',
+            message: 'Tools available via Mastra Cloud API endpoints',
+            baseUrl: `https://${c.req.header('host')}`,
+            endpoints: {
+              agents: '/agents/climbingPillAgent/generate',
+              tools: '/tools',
+              info: '/mcp-info'
+            }
           });
         },
       }),
