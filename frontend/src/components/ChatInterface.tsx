@@ -1676,10 +1676,68 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         }`}>
                      <ReactMarkdown 
              components={{
-               p: ({ children }) => <p className="mb-2">{children}</p>,
+               p: ({ children }) => {
+                 // Convert URLs in text to clickable links
+                 const content = String(children);
+                 const urlRegex = /(https?:\/\/[^\s]+)/g;
+                 
+                 if (urlRegex.test(content)) {
+                   const parts = content.split(urlRegex);
+                   return (
+                     <p className="mb-2">
+                       {parts.map((part, index) => {
+                         if (part.match(urlRegex)) {
+                           return (
+                             <a
+                               key={index}
+                               href={part}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="text-blue-400 hover:text-blue-300 underline decoration-blue-400 hover:decoration-blue-300 transition-colors"
+                             >
+                               {part}
+                             </a>
+                           );
+                         }
+                         return part;
+                       })}
+                     </p>
+                   );
+                 }
+                 return <p className="mb-2">{children}</p>;
+               },
                ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
-               li: ({ children }) => <li className="mb-1">{children}</li>,
+               li: ({ children }) => {
+                 // Also handle URLs in list items
+                 const content = String(children);
+                 const urlRegex = /(https?:\/\/[^\s]+)/g;
+                 
+                 if (urlRegex.test(content)) {
+                   const parts = content.split(urlRegex);
+                   return (
+                     <li className="mb-1">
+                       {parts.map((part, index) => {
+                         if (part.match(urlRegex)) {
+                           return (
+                             <a
+                               key={index}
+                               href={part}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="text-blue-400 hover:text-blue-300 underline decoration-blue-400 hover:decoration-blue-300 transition-colors"
+                             >
+                               {part}
+                             </a>
+                           );
+                         }
+                         return part;
+                       })}
+                     </li>
+                   );
+                 }
+                 return <li className="mb-1">{children}</li>;
+               },
                strong: ({ children }) => <strong className="font-bold">{children}</strong>,
                em: ({ children }) => <em className="italic">{children}</em>,
                code: ({ children }) => <code className="bg-gray-700 px-1 rounded text-sm">{children}</code>,

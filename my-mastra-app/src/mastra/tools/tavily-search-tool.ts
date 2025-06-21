@@ -140,14 +140,14 @@ export const tavilySearchTool = createTool({
     }
 
     if (formattedResults.length > 0) {
-      summary += '\n\nTop sources:';
+      summary += '\n\n**Key Sources:**';
       formattedResults.slice(0, 3).forEach((result, index) => {
-        summary += `\n${index + 1}. ${result.title} - ${result.url}`;
+        summary += `\n${index + 1}. **${result.title}**\n   🔗 ${result.url}\n`;
       });
       
       // Add a note about more results being available
       if (formattedResults.length > 3) {
-        summary += `\n\n📋 View all ${formattedResults.length} results with clickable links in the sidebar →`;
+        summary += `\n📋 View all ${formattedResults.length} results with clickable links in the sidebar →`;
       }
     }
 
