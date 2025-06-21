@@ -49,73 +49,70 @@ export const climbingPillAPI = {
   // Get latest training program directly from Supabase with improved error handling
   async getLatestProgram(userId: string) {
     try {
-      console.log('💾 V2 API: getLatestProgram - Querying for user:', userId);
+      console.log('💾 V3 API: getLatestProgram - Using optimized lightweight query for user:', userId);
       
-      // Add retry logic for better reliability (reduced for faster fallback)
-      let retryCount = 0;
-      const maxRetries = 2;
+      // Strategy: First try a lightweight query for metadata only, then fetch full data if needed
+      // This avoids transferring large JSONB data unless absolutely necessary
       
-      while (retryCount < maxRetries) {
-        try {
-          // Optimized query with specific column selection for better performance
-          const queryPromise = supabase
-            .from('training_programs')
-            .select('id, user_id, program_name, program_data, created_at, updated_at, status')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(); // Use maybeSingle for better performance when expecting 0 or 1 result
-          
-          // Shorter timeout for better UX - if DB is slow, fall back quickly
-          const timeoutDuration = 3000 + (retryCount * 1000); // 3s, 4s, 5s
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout')), timeoutDuration)
-          );
-          
-          const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      try {
+        // Step 1: Fast lightweight query to check if program exists
+        const lightQueryPromise = supabase
+          .from('training_programs')
+          .select('id, user_id, program_name, created_at, updated_at, status')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        // Very short timeout for lightweight query (1.5 seconds)
+        const lightTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Lightweight query timeout')), 1500)
+        );
+        
+        const { data: lightData, error: lightError } = await Promise.race([lightQueryPromise, lightTimeoutPromise]) as any;
 
-          if (error) {
-            console.error(`🔥 V2 API: getLatestProgram - Supabase error (attempt ${retryCount + 1}):`, error);
-            
-            // If it's a timeout or connection error, retry
-            if (error.message.includes('timeout') || error.message.includes('connection')) {
-              retryCount++;
-              if (retryCount < maxRetries) {
-                console.log(`🔄 V2 API: Retrying in ${1000 * retryCount}ms...`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-                continue;
-              }
-            }
-            
-            console.log('❌ V2 API: No training program found for user:', userId);
-            return null;
-          }
-
-          if (!data) {
-            console.log('📭 V2 API: getLatestProgram - No programs found for user:', userId);
-            return null;
-          }
-
-          const latestProgram = data; // maybeSingle returns the object directly, not an array
-          console.log('✅ V2 API: getLatestProgram - Found program:', latestProgram);
-          return latestProgram;
-          
-        } catch (attemptError) {
-          console.error(`🔥 V2 API: getLatestProgram - Attempt ${retryCount + 1} failed:`, attemptError);
-          retryCount++;
-          
-          if (retryCount >= maxRetries) {
-            throw attemptError;
-          }
-          
-          // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        if (lightError || !lightData) {
+          console.log('📭 V3 API: No programs found or lightweight query failed for user:', userId);
+          return null;
         }
+
+        console.log('✅ V3 API: Found program metadata:', lightData.program_name, lightData.created_at);
+
+        // Step 2: If we have a program, fetch the full data with program_data
+        // Use a slightly longer timeout since we know the program exists
+        const fullQueryPromise = supabase
+          .from('training_programs')
+          .select('id, user_id, program_name, program_data, created_at, updated_at, status')
+          .eq('id', lightData.id)
+          .maybeSingle();
+        
+        const fullTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Full query timeout')), 2500)
+        );
+        
+        const { data: fullData, error: fullError } = await Promise.race([fullQueryPromise, fullTimeoutPromise]) as any;
+
+        if (fullError) {
+          console.warn('⚠️ V3 API: Full data query failed, returning metadata only:', fullError);
+          // Return lightweight data if full query fails - better than nothing
+          return lightData;
+        }
+
+        if (!fullData) {
+          console.warn('⚠️ V3 API: Full data not found, returning metadata only');
+          return lightData;
+        }
+
+        console.log('✅ V3 API: Successfully fetched full program data');
+        return fullData;
+        
+      } catch (attemptError) {
+        console.error('🔥 V3 API: Optimized query failed:', attemptError);
+        return null;
       }
       
-      return null;
     } catch (error) {
-      console.error('❌ V2 API: Error getting latest program after all retries:', error);
+      console.error('❌ V3 API: Error in getLatestProgram:', error);
       return null;
     }
   },
