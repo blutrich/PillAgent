@@ -1,212 +1,211 @@
 # ClimbingPill MCP Server Guide
 
-This guide explains how to run and use the ClimbingPill MCP Server to expose your climbing tools to external MCP clients like Cursor, Claude Desktop, and other AI assistants.
+## 🧗 Overview
 
-## 🏗️ Architecture Overview
+The ClimbingPill MCP Server exposes your climbing AI coach capabilities to external MCP clients like Cursor, Claude Desktop, and other AI tools. This allows other applications to access your climbing expertise!
 
-### Two Separate Systems:
+## 🔧 Available Tools
 
-1. **Mastra Cloud App** (`src/mastra/index.ts`)
-   - Main application deployed to Mastra Cloud
-   - Agents and tools accessible via HTTP API
-   - Used by your frontend application
+When you connect to the ClimbingPill MCP server, you get access to these tools:
 
-2. **MCP Server** (`src/mastra/mcp-server.ts`)
-   - Separate server exposing tools via MCP protocol
-   - Used by external MCP clients (Cursor, Claude Desktop, etc.)
-   - Runs independently from main app
+### **Core Climbing Tools**
+- `climbingAssessment` - Conduct comprehensive climbing assessments
+- `programGeneration` - Generate personalized training programs  
+- `getUserTrainingProgram` - Retrieve existing training programs
 
-## 🚀 Running the MCP Server
+### **Journal & Tracking**
+- `createJournalEntry` - Log climbing sessions and progress
+- `queryJournal` - Search through training history
 
-### 1. Streamable HTTP Transport (Recommended)
-Modern, efficient transport with session management:
+### **Utilities**
+- `createTimer` - Set up training timers
+- `getTimerPresets` - Get common timer configurations
+- `weather` - Check climbing conditions
+- `tavilySearch` - Search for climbing information online
 
+### **AI Agent**
+- `ask_climbingPillAgent` - Chat with the ClimbingPill AI coach
+
+## 🚀 Starting the MCP Server
+
+### **1. Stdio Mode (Command Line)**
 ```bash
-npm run mcp:http
-# or manually:
-MCP_MODE=http PORT=8080 node -r dotenv/config start-mcp-server.ts
+cd my-mastra-app
+tsx start-mcp-server.ts stdio
 ```
 
-**Features:**
-- ✅ Session management with UUID generation
-- ✅ Message resumability  
-- ✅ Streaming responses
-- ✅ Health check endpoint
-
-**Endpoints:**
-- MCP: `http://localhost:8080/mcp`
-- Health: `http://localhost:8080/`
-
-### 2. STDIO Transport (CLI Tools)
-For command-line MCP clients:
-
+### **2. HTTP Mode (Web API)**
 ```bash
-npm run mcp:stdio
-# or manually:
-node -r dotenv/config start-mcp-server.ts
+tsx start-mcp-server.ts http 8080
+# Connects at: http://localhost:8080/mcp
 ```
 
-**Use case:** Direct integration with CLI tools
-
-### 3. SSE Transport (Legacy)
-Server-Sent Events for older clients:
-
+### **3. SSE Mode (Server-Sent Events)**
 ```bash
-npm run mcp:sse
-# or manually:
-MCP_MODE=sse PORT=8080 node -r dotenv/config start-mcp-server.ts
+tsx start-mcp-server.ts sse 8080
+# Connects at: http://localhost:8080/sse
 ```
 
-**Endpoints:**
-- SSE: `http://localhost:8080/sse`
-- Health: `http://localhost:8080/`
+## 🔌 Connecting External Clients
 
-## 🧗 Available Tools
+### **Cursor IDE**
 
-The MCP server exposes all ClimbingPill tools:
-
-### Core Tools
-- **climbingAssessment** - Complete climbing assessment
-- **programGeneration** - Generate training programs
-- **getUserTrainingProgram** - Get existing user programs
-
-### Utility Tools
-- **weather** - Weather information for outdoor climbing
-- **tavilySearch** - Web search for climbing info
-- **createJournalEntry** - Log climbing sessions
-- **queryJournal** - Search climbing history
-- **createTimer** - Training timers
-- **getTimerPresets** - Timer presets
-
-### AI Agent
-- **ask_climbingPillAgent** - Chat with the climbing AI coach
-
-## 🔧 Client Configuration
-
-### For Cursor/Windsurf
-Add to your MCP configuration:
+1. Open Cursor settings
+2. Navigate to MCP configuration
+3. Add this configuration:
 
 ```json
 {
   "mcpServers": {
     "climbingpill": {
-      "command": "node",
-      "args": ["-r", "dotenv/config", "/path/to/start-mcp-server.ts"],
+      "command": "tsx",
+      "args": ["/path/to/PillAgent/my-mastra-app/start-mcp-server.ts", "stdio"],
       "env": {
-        "MCP_MODE": "stdio"
+        "OPENAI_API_KEY": "your-openai-key",
+        "SUPABASE_URL": "your-supabase-url",
+        "SUPABASE_ANON_KEY": "your-supabase-key"
       }
     }
   }
 }
 ```
 
-### For HTTP Clients
-Connect to: `http://localhost:8080/mcp`
+### **Claude Desktop**
 
-## 🏔️ Example Usage
+1. Edit: `~/Library/Application Support/Claude/claude_desktop_config.json`
+2. Add:
 
-Once connected, you can use tools like:
-
-```
-# Get weather for climbing location
-weather({"location": "Yosemite Valley, CA"})
-
-# Create climbing assessment
-climbingAssessment({
-  "age": 28,
-  "weight": 70,
-  "height": 175,
-  "fingerStrength": 15,
-  "pullUps": 12,
-  "pushUps": 30,
-  "coreStrength": 8,
-  "flexibility": 7,
-  "climbingGrade": "V6",
-  "experience": 3
-})
-
-# Chat with AI coach
-ask_climbingPillAgent({"message": "What's the best training plan for improving from V6 to V8?"})
+```json
+{
+  "mcpServers": {
+    "climbingpill-ai-coach": {
+      "command": "tsx",
+      "args": ["/path/to/PillAgent/my-mastra-app/start-mcp-server.ts", "stdio"]
+    }
+  }
+}
 ```
 
-## 🐛 Debugging
+### **Custom MCP Client**
 
-### Check Server Status
-```bash
-curl http://localhost:8080/
-```
+```typescript
+import { MCPClient } from "@mastra/mcp";
 
-### View Logs
-The server outputs detailed logs including:
-- Session initialization
-- Tool executions
-- Error messages
+const client = new MCPClient({
+  servers: {
+    climbingpill: {
+      command: "tsx",
+      args: ["start-mcp-server.ts", "stdio"],
+      env: {
+        OPENAI_API_KEY: "your-key"
+      }
+    }
+  }
+});
 
-### Common Issues
+// Get all climbing tools
+const tools = await client.getTools();
 
-1. **Port conflicts**: Change PORT environment variable
-2. **Missing dependencies**: Run `npm install`
-3. **Environment variables**: Ensure `.env` file has required API keys
-
-## 🔑 Required Environment Variables
-
-```bash
-# OpenAI for AI agent
-OPENAI_API_KEY=your_openai_key
-
-# Supabase for data storage
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_key
-
-# Optional: Tavily for web search
-TAVILY_API_KEY=your_tavily_key
+// Use the climbing agent
+const result = await tools.ask_climbingPillAgent({
+  message: "What's the best training for V7 bouldering?"
+});
 ```
 
 ## 🎯 Use Cases
 
-### Development
-- **Cursor/Windsurf**: Use climbing tools directly in your IDE
-- **Claude Desktop**: Access climbing expertise in conversations
-- **Custom MCP Clients**: Build specialized climbing applications
+### **1. IDE Integration**
+- Get climbing advice directly in your code editor
+- Generate training programs while coding
+- Access climbing knowledge during development
 
-### Production
-- **API Integration**: Expose tools to other services
-- **Multi-tenant**: Session management for multiple users
-- **Scaling**: Run multiple instances with load balancing
+### **2. Multi-Tool Workflows**
+- Combine climbing expertise with other MCP servers
+- Create complex automation workflows
+- Integrate with productivity tools
 
-## 🔄 Deployment Options
+### **3. External Applications**
+- Add climbing intelligence to other apps
+- Build custom climbing tools using the MCP protocol
+- Share climbing expertise across different platforms
 
-### Local Development
+## 🛠 Advanced Configuration
+
+### **Custom Port & Environment**
 ```bash
-npm run mcp:http  # Streamable HTTP on localhost:8080
+# Custom port
+tsx start-mcp-server.ts http 9090
+
+# With environment variables
+OPENAI_API_KEY=your-key tsx start-mcp-server.ts stdio
 ```
 
-### Docker
-```dockerfile
-FROM node:20
-# ... copy files ...
-EXPOSE 8080
-CMD ["npm", "run", "mcp:http"]
+### **Production Deployment**
+For production use, consider:
+- Using PM2 or similar process manager
+- Setting up proper environment variables
+- Implementing authentication for HTTP/SSE modes
+- Adding monitoring and logging
+
+### **Security Considerations**
+- Stdio mode: Secure by default (local process)
+- HTTP/SSE modes: Consider adding authentication
+- Environment variables: Use secure secret management
+- Network access: Restrict to trusted clients only
+
+## 📊 Tool Usage Examples
+
+### **Climbing Assessment**
+```typescript
+const assessment = await tools.climbingAssessment({
+  bodyWeight: 70,
+  maxPullUps: 15,
+  maxPushUps: 30,
+  coreStrength: 60,
+  flexibility: 8,
+  eightyPercentGrade: "V4"
+});
 ```
 
-### Cloud Platforms
-Deploy as a separate service alongside your main Mastra Cloud app
+### **Program Generation**
+```typescript
+const program = await tools.programGeneration({
+  currentGrade: "V6",
+  targetGrade: "V8",
+  trainingEnvironment: "gym",
+  focusAreas: ["strength", "technique"]
+});
+```
 
-## 📊 Monitoring
+### **Ask the AI Coach**
+```typescript
+const advice = await tools.ask_climbingPillAgent({
+  message: "I'm struggling with overhangs. What specific exercises should I focus on?"
+});
+```
 
-### Health Checks
-- **HTTP**: `GET http://localhost:8080/`
-- **Response**: Server status and available endpoints
+## 🔍 Debugging
 
-### Session Tracking
-The server logs all session initializations and tool executions for monitoring and debugging.
+### **Check Server Status**
+```bash
+# Test if server starts
+tsx start-mcp-server.ts stdio
 
----
+# Check HTTP endpoint
+curl http://localhost:8080/mcp
+```
 
-## 🤝 Integration with Main App
+### **Common Issues**
+1. **Missing Environment Variables**: Ensure all API keys are set
+2. **Port Conflicts**: Try different ports for HTTP/SSE modes
+3. **Tool Import Errors**: Check that all tool files exist and export correctly
+4. **Client Connection Issues**: Verify client configuration matches server mode
 
-The MCP server shares the same tool implementations as your main Mastra Cloud app but runs as a separate process. This allows:
+## 🚀 Next Steps
 
-- **Consistent behavior** across both HTTP API and MCP protocol
-- **Independent scaling** of MCP server and main app
-- **Security isolation** between internal and external access 
+1. **Test the MCP Server**: Start with stdio mode and verify tools work
+2. **Connect to Cursor**: Add the MCP configuration to test in your IDE
+3. **Explore Tool Combinations**: Try combining climbing tools with other capabilities
+4. **Build Custom Clients**: Create specialized applications using the MCP protocol
+
+The ClimbingPill MCP server makes your climbing expertise available everywhere! 🧗‍♀️ 

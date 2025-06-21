@@ -22,28 +22,21 @@ async function main() {
     console.log('MCP Server ready for stdio connections');
     await climbingPillMCPServer.startStdio();
   } else if (mode === 'http') {
-    // For streamable HTTP connections (modern, efficient)
+    // For HTTP/SSE connections
     const http = require('http');
-    const { randomUUID } = require('crypto');
     
     const server = http.createServer(async (req: any, res: any) => {
       const url = new URL(req.url || '', `http://localhost:${port}`);
       
-      // Handle MCP server requests using streamable HTTP transport
+      // Handle MCP server requests
       if (url.pathname === '/mcp' || url.pathname.startsWith('/mcp/')) {
         try {
-          await climbingPillMCPServer.startHTTP({
+          await climbingPillMCPServer.startSSE({
             url,
-            httpPath: '/mcp',
+            ssePath: '/mcp',
+            messagePath: '/mcp/message',
             req,
             res,
-            options: {
-              sessionIdGenerator: () => randomUUID(), // Enable session management
-              enableJsonResponse: false, // Use streaming by default
-              onsessioninitialized: (sessionId: string) => {
-                console.log(`New MCP session initialized: ${sessionId}`);
-              }
-            }
           });
         } catch (error) {
           console.error('MCP Server error:', error);
@@ -55,55 +48,18 @@ async function main() {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
           status: 'healthy', 
-          server: 'ClimbingPill MCP Server (Streamable HTTP)',
+          server: 'ClimbingPill MCP Server',
           endpoints: {
             mcp: '/mcp',
             health: '/'
-          },
-          transport: 'streamable-http'
+          }
         }));
       }
     });
     
     server.listen(port, () => {
-      console.log(`🚀 ClimbingPill MCP Server (Streamable HTTP) listening on http://localhost:${port}/mcp`);
-      console.log(`📊 Health check: http://localhost:${port}/`);
-      console.log(`🔧 Transport: Streamable HTTP with session management`);
-    });
-  } else if (mode === 'sse') {
-    // Legacy SSE support for older clients
-    const http = require('http');
-    
-    const server = http.createServer(async (req: any, res: any) => {
-      const url = new URL(req.url || '', `http://localhost:${port}`);
-      
-      if (url.pathname === '/sse' || url.pathname.startsWith('/sse/')) {
-        try {
-          await climbingPillMCPServer.startSSE({
-            url,
-            ssePath: '/sse',
-            messagePath: '/sse/message',
-            req,
-            res,
-          });
-        } catch (error) {
-          console.error('SSE MCP Server error:', error);
-          res.writeHead(500);
-          res.end('Internal Server Error');
-        }
-      } else {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          status: 'healthy', 
-          server: 'ClimbingPill MCP Server (SSE)', 
-          endpoints: { sse: '/sse', health: '/' },
-          transport: 'sse'
-        }));
-      }
-    });
-    
-    server.listen(port, () => {
-      console.log(`📡 ClimbingPill MCP Server (SSE) listening on http://localhost:${port}/sse`);
+      console.log(`MCP Server listening on http://localhost:${port}/mcp`);
+      console.log(`Health check: http://localhost:${port}/`);
     });
   }
 }

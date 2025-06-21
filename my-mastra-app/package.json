@@ -9,8 +9,8 @@
     "build": "mastra build",
     "start": "node -r dotenv/config ./node_modules/.bin/mastra start",
     "mcp:stdio": "node -r dotenv/config start-mcp-server.ts",
-    "mcp:http": "MCP_MODE=http PORT=8080 node -r dotenv/config start-mcp-server.ts",
-    "mcp:sse": "MCP_MODE=sse PORT=8080 node -r dotenv/config start-mcp-server.ts"
+    "mcp:http": "MCP_MODE=http node -r dotenv/config start-mcp-server.ts",
+    "mcp:claude": "node -r dotenv/config mcp-http-server.ts"
   },
   "keywords": [],
   "author": "",
