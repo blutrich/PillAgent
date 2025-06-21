@@ -509,7 +509,7 @@ export const climbingPillAPI = {
         maxPushUps: parseFloat(assessmentData.pushUpsMax as string),
         maxToeToBar: parseFloat(assessmentData.toeToBarMax as string),
         legSpreadDistance: parseFloat(assessmentData.legSpread as string),
-        eightyPercentGrade: assessmentData.eightyPercentGrade as string,
+        eightyPercentGrade: assessmentData.currentGrade as string, // Fix: Use currentGrade from frontend
         assessmentType: 'complete' as const,
         climberName: 'ClimbingPill User',
         // Additional context from frontend
