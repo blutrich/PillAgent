@@ -909,7 +909,7 @@ const SearchResults = ({ searchData, onOpenArtifact }: { searchData: any, onOpen
         {onOpenArtifact && (
           <button
             onClick={() => onOpenArtifact('Search Results', 'search', searchData)}
-            className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors underline decoration-blue-400 hover:decoration-blue-300"
           >
             View All →
           </button>
@@ -946,7 +946,7 @@ const SearchResults = ({ searchData, onOpenArtifact }: { searchData: any, onOpen
                     href={result.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-teal-400 hover:text-teal-300 text-xs transition-colors"
+                    className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs transition-colors underline decoration-blue-400 hover:decoration-blue-300"
                   >
                     <span className="truncate max-w-[200px]">{result.url}</span>
                     <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -965,7 +965,7 @@ const SearchResults = ({ searchData, onOpenArtifact }: { searchData: any, onOpen
             <div className="text-center">
               <button
                 onClick={() => onOpenArtifact?.('Search Results', 'search', searchData)}
-                className="text-teal-400 hover:text-teal-300 text-sm transition-colors"
+                className="text-blue-400 hover:text-blue-300 text-sm transition-colors underline decoration-blue-400 hover:decoration-blue-300"
               >
                 View {searchData.results.length - 3} more results →
               </button>
@@ -1644,7 +1644,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
                       href={result.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 text-sm transition-colors"
+                      className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm transition-colors underline decoration-blue-400 hover:decoration-blue-300"
                     >
                       <span className="truncate">{result.url}</span>
                       <ExternalLink className="w-4 h-4 flex-shrink-0" />
