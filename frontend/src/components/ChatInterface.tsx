@@ -1247,8 +1247,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
     setInputMessage('')
     setIsTyping(true)
 
-        try {
-      // Send message to AI coach
+    try {
+      // Use regular chat API for now (streaming has API compatibility issues)
       const response = await climbingPillAPI.chat(messageContent, user.id)
        
              // Parse response for rich content - response.content is the correct field from mastra-client
@@ -1311,12 +1311,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         }
       }
 
-             const assistantMessage: Message = {
-         role: 'assistant',
-         content: responseContent,
-         richContent: enhancedRichContent || undefined,
-         timestamp: new Date()
-       }
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: responseContent,
+        richContent: enhancedRichContent || undefined,
+        timestamp: new Date()
+      }
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (error) {

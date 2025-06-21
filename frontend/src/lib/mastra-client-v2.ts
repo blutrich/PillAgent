@@ -88,7 +88,130 @@ export const climbingPillAPI = {
     }
   },
 
-  // Chat with the AI coach
+  // Chat with the AI coach (streaming version) - Updated to match Mastra API specs
+  async chatStream(message: string, userId: string, threadId?: string, onChunk?: (chunk: string) => void) {
+    try {
+      // Use user-specific thread ID to avoid conflicts between users
+      const actualThreadId = threadId || `user-${userId}-conversation`;
+      
+      // Get user's current program and assessment data to provide context
+      let contextMessage = message;
+      
+      try {
+        console.log('Chat Stream: Getting program and assessment data for user:', userId);
+        
+        // Ultra-fast context fetching (3 seconds max total for streaming)
+        const contextPromise = Promise.all([
+          this.getTrainingProgram(userId).catch(e => {
+            console.warn('Failed to get training program:', e.message);
+            return null;
+          }),
+          this.getLatestAssessment(userId).catch(e => {
+            console.warn('Failed to get assessment:', e.message);
+            return null;
+          })
+        ]);
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Context timeout')), 3000)
+        );
+        
+        const [programData, assessmentData] = await Promise.race([
+          contextPromise,
+          timeoutPromise
+        ]) as [any, any];
+
+        console.log('Chat Stream: Program data retrieved:', programData);
+        console.log('Chat Stream: Assessment data retrieved:', assessmentData);
+
+        // Build context with user info
+        const context = {
+          userMessage: message,
+          userId: userId,
+          isExistingUser: true,
+          currentProgram: programData?.detailedProgram,
+          programName: programData?.name,
+          currentWeek: programData?.currentWeek,
+          assessmentData: assessmentData && assessmentData.length > 0 ? {
+            predictedGrade: assessmentData[0].predicted_grade,
+            compositeScore: assessmentData[0].composite_score,
+            currentGrade: assessmentData[0].current_grade,
+            targetGrade: assessmentData[0].target_grade
+          } : null
+        };
+        contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(context)}`;
+        console.log('Chat Stream: Sending context message:', contextMessage);
+      } catch (error) {
+        console.warn('Chat Stream: Context fetching failed, using fallback:', error instanceof Error ? error.message : String(error));
+        const fallbackContext = {
+          userMessage: message,
+          userId: userId,
+          isExistingUser: true,
+          note: "Context fetching timed out, but this is an authenticated existing user"
+        };
+        contextMessage = `User question: "${message}"\n\nUser Context: ${JSON.stringify(fallbackContext)}`;
+        console.log('Chat Stream: Using fallback context:', contextMessage);
+      }
+
+      // Use Mastra's correct streaming API format
+      const response = await fetch(`${MASTRA_API_BASE}/agents/climbingPillAgent/stream`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'  // Mastra streaming returns JSON, not SSE
+        },
+        body: JSON.stringify({ 
+          messages: [contextMessage],  // Mastra expects array of strings
+          resourceId: userId,          // Correct capitalization
+          threadId: actualThreadId
+        }),
+        signal: AbortSignal.timeout(60000)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Streaming API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
+      
+      // Parse the streaming response according to Mastra docs
+      const data = await response.json();
+      console.log('Streaming API Response:', data);
+      
+      let fullContent = '';
+      
+      // Check if we have a textStream in the response
+      if (data.textStream) {
+        // Handle async iterable textStream
+        for await (const chunk of data.textStream) {
+          fullContent += chunk;
+          onChunk?.(chunk);
+        }
+      } else if (data.text || data.content) {
+        // Fallback to single response
+        fullContent = data.text || data.content;
+        onChunk?.(fullContent);
+      } else {
+        console.warn('No streaming data found in response:', data);
+        throw new Error('No streaming content received');
+      }
+      
+      return {
+        role: 'assistant',
+        content: fullContent,
+        confidence: 0.9
+      };
+      
+    } catch (error) {
+      console.error('Error streaming with AI coach:', error);
+      
+      // Fallback to regular chat if streaming fails
+      console.log('Falling back to regular chat...');
+      return this.chat(message, userId, threadId);
+    }
+  },
+
+  // Chat with the AI coach (original non-streaming version)
   async chat(message: string, userId: string, threadId?: string) {
     try {
       // Use user-specific thread ID to avoid conflicts between users
