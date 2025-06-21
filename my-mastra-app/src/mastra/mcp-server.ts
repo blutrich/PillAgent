@@ -17,6 +17,8 @@ import {
 } from "./tools/timer-tool";
 
 // Create MCP Server to expose ClimbingPill capabilities
+// NOTE: This is for external MCP clients (like Cursor, Claude Desktop), not for Mastra Cloud deployment
+// For Mastra Cloud, agents and tools are exposed directly through the main Mastra server
 export const climbingPillMCPServer = new MCPServer({
   name: "ClimbingPill AI Coach Server",
   version: "1.0.0",

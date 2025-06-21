@@ -1,61 +1,113 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 
-import { 
-  climbingPillMCPServer, 
-  startStdioServer, 
-  startHTTPServer, 
-  startSSEServer 
-} from "./src/mastra/mcp-server";
+/**
+ * Start the ClimbingPill MCP Server for external MCP clients
+ * This exposes your tools to Cursor, Claude Desktop, and other MCP clients
+ * 
+ * Usage:
+ * - For stdio (CLI tools): node start-mcp-server.ts
+ * - For HTTP/SSE: Set PORT environment variable and run
+ */
 
-// Get command line arguments
-const args = process.argv.slice(2);
-const mode = args[0] || 'stdio';
-const port = parseInt(args[1]) || 8080;
+import { climbingPillMCPServer } from './src/mastra/mcp-server';
 
 async function main() {
-  console.log("🧗 ClimbingPill MCP Server");
-  console.log("========================");
+  const mode = process.env.MCP_MODE || 'stdio';
+  const port = process.env.PORT || 8080;
   
-  switch (mode.toLowerCase()) {
-    case 'stdio':
-      console.log("Starting in STDIO mode (for command-line clients)...");
-      await startStdioServer();
-      break;
+  console.log(`Starting ClimbingPill MCP Server in ${mode} mode...`);
+  
+  if (mode === 'stdio') {
+    // For CLI tools like npx, direct stdio connection
+    console.log('MCP Server ready for stdio connections');
+    await climbingPillMCPServer.startStdio();
+  } else if (mode === 'http') {
+    // For streamable HTTP connections (modern, efficient)
+    const http = require('http');
+    const { randomUUID } = require('crypto');
+    
+    const server = http.createServer(async (req: any, res: any) => {
+      const url = new URL(req.url || '', `http://localhost:${port}`);
       
-    case 'http':
-      console.log(`Starting HTTP server on port ${port}...`);
-      console.log(`📍 Connect MCP clients to: http://localhost:${port}/mcp`);
-      await startHTTPServer(port);
-      break;
+      // Handle MCP server requests using streamable HTTP transport
+      if (url.pathname === '/mcp' || url.pathname.startsWith('/mcp/')) {
+        try {
+          await climbingPillMCPServer.startHTTP({
+            url,
+            httpPath: '/mcp',
+            req,
+            res,
+            options: {
+              sessionIdGenerator: () => randomUUID(), // Enable session management
+              enableJsonResponse: false, // Use streaming by default
+              onsessioninitialized: (sessionId: string) => {
+                console.log(`New MCP session initialized: ${sessionId}`);
+              }
+            }
+          });
+        } catch (error) {
+          console.error('MCP Server error:', error);
+          res.writeHead(500);
+          res.end('Internal Server Error');
+        }
+      } else {
+        // Health check endpoint
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          status: 'healthy', 
+          server: 'ClimbingPill MCP Server (Streamable HTTP)',
+          endpoints: {
+            mcp: '/mcp',
+            health: '/'
+          },
+          transport: 'streamable-http'
+        }));
+      }
+    });
+    
+    server.listen(port, () => {
+      console.log(`🚀 ClimbingPill MCP Server (Streamable HTTP) listening on http://localhost:${port}/mcp`);
+      console.log(`📊 Health check: http://localhost:${port}/`);
+      console.log(`🔧 Transport: Streamable HTTP with session management`);
+    });
+  } else if (mode === 'sse') {
+    // Legacy SSE support for older clients
+    const http = require('http');
+    
+    const server = http.createServer(async (req: any, res: any) => {
+      const url = new URL(req.url || '', `http://localhost:${port}`);
       
-    case 'sse':
-      console.log(`Starting SSE server on port ${port}...`);
-      console.log(`📍 Connect MCP clients to: http://localhost:${port}/sse`);
-      await startSSEServer(port);
-      break;
-      
-    default:
-      console.error("❌ Invalid mode. Use: stdio, http, or sse");
-      console.log("\nUsage:");
-      console.log("  tsx start-mcp-server.ts stdio");
-      console.log("  tsx start-mcp-server.ts http [port]");
-      console.log("  tsx start-mcp-server.ts sse [port]");
-      process.exit(1);
+      if (url.pathname === '/sse' || url.pathname.startsWith('/sse/')) {
+        try {
+          await climbingPillMCPServer.startSSE({
+            url,
+            ssePath: '/sse',
+            messagePath: '/sse/message',
+            req,
+            res,
+          });
+        } catch (error) {
+          console.error('SSE MCP Server error:', error);
+          res.writeHead(500);
+          res.end('Internal Server Error');
+        }
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          status: 'healthy', 
+          server: 'ClimbingPill MCP Server (SSE)', 
+          endpoints: { sse: '/sse', health: '/' },
+          transport: 'sse'
+        }));
+      }
+    });
+    
+    server.listen(port, () => {
+      console.log(`📡 ClimbingPill MCP Server (SSE) listening on http://localhost:${port}/sse`);
+    });
   }
 }
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log("\n🛑 Shutting down ClimbingPill MCP Server...");
-  process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  console.log("\n🛑 Shutting down ClimbingPill MCP Server...");
-  process.exit(0);
-});
-
-main().catch((error) => {
-  console.error("❌ Failed to start MCP server:", error);
-  process.exit(1);
-}); 
+if (require.main === module) {
+  main().catch(console.error);
+} 

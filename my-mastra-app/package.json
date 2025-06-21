@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node -r dotenv/config ./node_modules/.bin/mastra dev",
     "build": "mastra build",
-    "start": "node -r dotenv/config ./node_modules/.bin/mastra start"
+    "start": "node -r dotenv/config ./node_modules/.bin/mastra start",
+    "mcp:stdio": "node -r dotenv/config start-mcp-server.ts",
+    "mcp:http": "MCP_MODE=http PORT=8080 node -r dotenv/config start-mcp-server.ts",
+    "mcp:sse": "MCP_MODE=sse PORT=8080 node -r dotenv/config start-mcp-server.ts"
   },
   "keywords": [],
   "author": "",

@@ -11,19 +11,13 @@ import { climbingAgent } from './agents/climbing-agent';
 // Import workflows
 import { simpleRetentionWorkflow } from './workflows/simple-retention-workflow';
 
-// Import MCP server
-import { climbingPillMCPServer } from './mcp-server';
-
+// Main Mastra instance for Cloud deployment (no MCP server registration needed)
 export const mastra = new Mastra({
   agents: { 
     climbingPillAgent: climbingAgent
   },
   workflows: {
     simpleRetentionWorkflow
-  },
-  // Register MCP server for Mastra Cloud visibility
-  mcpServers: {
-    climbingPillMCPServer
   },
   storage: new LibSQLStore({
     url: 'file:./mastra-climbing.db' // Persistent file storage
@@ -32,11 +26,11 @@ export const mastra = new Mastra({
     name: 'ClimbingPill-Mastra',
     level: 'info'
   }),
-  // Add server configuration for cloud deployment
+  // Server configuration for cloud deployment
   server: {
     port: process.env.PORT ? parseInt(process.env.PORT) : 4111,
     cors: {
-      origin: '*', // Allow all origins for MCP connections
+      origin: '*', // Allow all origins
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization', 'x-mastra-*'],
       credentials: true,
