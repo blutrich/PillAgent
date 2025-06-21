@@ -18,6 +18,12 @@
 - Go to: https://platform.openai.com/api-keys
 - Create or copy your API key
 
+### 4. Tavily Search API Key
+- Go to: https://tavily.com/
+- Sign up for an account
+- Navigate to your dashboard/API keys section
+- Create or copy your API key
+
 ## Environment Variables
 
 Create a `.env` file in your project root with:
@@ -29,6 +35,9 @@ SUPABASE_SERVICE_KEY=your_service_role_key_here
 
 # OpenAI for Vector Embeddings
 OPENAI_API_KEY=your_openai_api_key_here
+
+# Tavily Search for Real-time Web Search
+TAVILY_API_KEY=your_tavily_api_key_here
 ```
 
 ## Your Supabase Project Info

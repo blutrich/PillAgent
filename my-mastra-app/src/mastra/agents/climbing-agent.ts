@@ -8,6 +8,7 @@ import { createOptimalMemory } from '../lib/supabase-memory';
 import { climbingAssessmentTool } from '../tools/climbing-assessment-tool';
 import { programGenerationTool, getUserTrainingProgramTool } from '../tools/program-generation-tool';
 import { weatherTool } from '../tools/weather-tool';
+import { tavilySearchTool } from '../tools/tavily-search-tool';
 import { 
   goalSettingTool, 
   currentLevelCheckTool, 
@@ -510,6 +511,50 @@ export const climbingAgent = new Agent({
     - "progress over time" → 6months or year timeframe
     - Default to "month" for general requests
 
+    TAVILY SEARCH TOOL USAGE:
+    Use the Tavily search tool for real-time information not in your knowledge base:
+    
+    AUTOMATIC SEARCH TRIGGERS:
+    For queries about:
+    - Current weather/conditions at climbing areas ("weather at Joshua Tree today")
+    - Recent climbing news and events ("latest climbing competitions", "new route development")
+    - Gear reviews and recommendations ("best crash pads 2024", "new climbing shoes review")
+    - Current route conditions and beta ("current conditions at Red Rocks", "route beta for [specific climb]")
+    - Climbing area information and access ("how to get to [crag]", "[area] climbing guide")
+    - Current events in climbing community ("climbing accidents", "new climbing regulations")
+    - Technical questions requiring recent information ("latest training research", "new climbing techniques")
+    
+    SEARCH STRATEGY:
+    1. Use "general" topic for most climbing queries
+    2. Use "news" topic for current events, competitions, accidents, or recent developments
+    3. Include specific climbing terms in queries for better results
+    4. Use include_domains for trusted climbing sites: ["mountainproject.com", "8a.nu", "rockandice.com", "climbing.com"]
+    5. Set max_results based on query complexity (3-5 for simple, 5-10 for complex)
+    
+    SEARCH RESPONSE FORMAT:
+    When providing search results, always:
+    "I found current information about [topic]. Let me search for the latest details...
+    
+    **Current Information:**
+    [AI-generated answer from Tavily if available]
+    
+    **Key Sources:**
+    [List top 2-3 sources with titles and URLs]
+    
+    **Summary:**
+    [Your analysis combining the search results with climbing expertise]
+    
+    [Relevant coaching advice or next steps]"
+    
+    CLIMBING-SPECIFIC SEARCH EXAMPLES:
+    - "weather at [climbing area]" → Use general search with location-specific query
+    - "route conditions [climb name]" → Use general search, include_domains climbing sites
+    - "climbing gear review [item]" → Use general search with year filter
+    - "climbing news today" → Use news topic with day/week time_range
+    - "new routes at [area]" → Use general search with recent time_range
+    
+    IMPORTANT: Always combine search results with your climbing expertise to provide actionable advice!
+
     Remember: Be conversational and smart! Parse what users mean, not just what they say exactly. Your goal is 85% completion rate with 5-minute average time through intelligent, flexible conversation that feels natural while staying efficient.
   `,
   model: llm,
@@ -553,7 +598,10 @@ export const climbingAgent = new Agent({
     getAnalyticsInsights: getAnalyticsInsightsTool,
     
     // Program generation tools
-    getUserTrainingProgram: getUserTrainingProgramTool
+    getUserTrainingProgram: getUserTrainingProgramTool,
+    
+    // Tavily search tool
+    tavilySearch: tavilySearchTool
   },
   workflows: {
     simpleRetentionWorkflow

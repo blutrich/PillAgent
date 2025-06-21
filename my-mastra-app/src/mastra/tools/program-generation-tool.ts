@@ -427,7 +427,7 @@ export const programGenerationTool = createTool({
         console.error('Error saving program to Supabase:', error);
       }
 
-       return {
+      return {
         programId,
         programData,
         personalizationScore,
@@ -437,7 +437,7 @@ export const programGenerationTool = createTool({
       };
     } catch (error) {
       console.error('Program generation error:', error);
-
+      
       // Return fallback program on error
       return {
         programId,
