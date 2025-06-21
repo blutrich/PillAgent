@@ -11,9 +11,10 @@ interface AssessmentModalProps {
 
 const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onComplete }) => {
   const { user } = useAuth()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [assessmentData, setAssessmentData] = useState({
+    assessmentType: 'complete' as 'quick' | 'partial' | 'complete',
     bodyWeight: '',
     height: '',
     addedWeight: '',
@@ -62,13 +63,14 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
       // ✅ FIXED: No frontend calculations - backend handles all scoring
       const assessmentPayload = {
         userId: user.id,
+        assessmentType: assessmentData.assessmentType,
         bodyWeight: parseFloat(assessmentData.bodyWeight),
         height: parseFloat(assessmentData.height),
-        addedWeight: parseFloat(assessmentData.addedWeight),
-        pullUpsMax: parseInt(assessmentData.pullUpsMax),
-        pushUpsMax: parseInt(assessmentData.pushUpsMax),
-        toeToBarMax: parseInt(assessmentData.toeToBarMax),
-        legSpread: parseFloat(assessmentData.legSpread),
+        addedWeight: parseFloat(assessmentData.addedWeight) || 0,
+        pullUpsMax: parseInt(assessmentData.pullUpsMax) || 0,
+        pushUpsMax: parseInt(assessmentData.pushUpsMax) || 0,
+        toeToBarMax: parseInt(assessmentData.toeToBarMax) || 0,
+        legSpread: parseFloat(assessmentData.legSpread) || 0,
         currentGrade: assessmentData.currentGrade,
         targetGrade: assessmentData.targetGrade,
         experience: assessmentData.experience,
@@ -92,12 +94,28 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
 
   const canProceed = () => {
     switch (currentStep) {
+      case 0:
+        return assessmentData.assessmentType
       case 1:
         return assessmentData.bodyWeight && assessmentData.height
       case 2:
-        return assessmentData.addedWeight && assessmentData.pullUpsMax && assessmentData.pushUpsMax && assessmentData.toeToBarMax
+        // Requirements based on assessment type
+        if (assessmentData.assessmentType === 'quick') {
+          return assessmentData.addedWeight && assessmentData.pullUpsMax
+        } else if (assessmentData.assessmentType === 'partial') {
+          return assessmentData.addedWeight && assessmentData.pullUpsMax && 
+                 (assessmentData.pushUpsMax || assessmentData.toeToBarMax)
+        } else {
+          return assessmentData.addedWeight && assessmentData.pullUpsMax && 
+                 assessmentData.pushUpsMax && assessmentData.toeToBarMax
+        }
       case 3:
-        return assessmentData.legSpread && assessmentData.currentGrade && assessmentData.targetGrade
+        // Flexibility optional for quick assessment
+        if (assessmentData.assessmentType === 'quick') {
+          return assessmentData.currentGrade && assessmentData.targetGrade
+        } else {
+          return assessmentData.legSpread && assessmentData.currentGrade && assessmentData.targetGrade
+        }
       case 4:
         return assessmentData.experience && assessmentData.availableDays.length > 0 && assessmentData.sessionDuration
       default:
@@ -107,6 +125,87 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
 
   const renderStep = () => {
     switch (currentStep) {
+      case 0:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold text-white mb-2">Choose Assessment Type</h3>
+              <p className="text-gray-400 text-sm">Select the type of assessment based on your available time and desired accuracy</p>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Quick Assessment */}
+              <div 
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  assessmentData.assessmentType === 'quick' 
+                    ? 'border-pink-500 bg-pink-500/10' 
+                    : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                }`}
+                onClick={() => updateData('assessmentType', 'quick')}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">🚀 Quick Assessment</h4>
+                    <p className="text-gray-400 text-sm">2-3 minutes • Basic grade prediction</p>
+                    <p className="text-gray-500 text-xs mt-1">Requires: Body weight, height, finger strength, pull-ups, current grade</p>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 ${
+                    assessmentData.assessmentType === 'quick' 
+                      ? 'border-pink-500 bg-pink-500' 
+                      : 'border-gray-600'
+                  }`} />
+                </div>
+              </div>
+
+              {/* Partial Assessment */}
+              <div 
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  assessmentData.assessmentType === 'partial' 
+                    ? 'border-lime-500 bg-lime-500/10' 
+                    : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                }`}
+                onClick={() => updateData('assessmentType', 'partial')}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">⚖️ Partial Assessment</h4>
+                    <p className="text-gray-400 text-sm">5-7 minutes • Good accuracy with key metrics</p>
+                    <p className="text-gray-500 text-xs mt-1">Requires: Basic + push-ups OR toe-to-bar + flexibility</p>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 ${
+                    assessmentData.assessmentType === 'partial' 
+                      ? 'border-lime-500 bg-lime-500' 
+                      : 'border-gray-600'
+                  }`} />
+                </div>
+              </div>
+
+              {/* Complete Assessment */}
+              <div 
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  assessmentData.assessmentType === 'complete' 
+                    ? 'border-teal-500 bg-teal-500/10' 
+                    : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                }`}
+                onClick={() => updateData('assessmentType', 'complete')}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">🎯 Complete Assessment</h4>
+                    <p className="text-gray-400 text-sm">10-15 minutes • Maximum accuracy</p>
+                    <p className="text-gray-500 text-xs mt-1">Requires: All metrics for comprehensive analysis</p>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 ${
+                    assessmentData.assessmentType === 'complete' 
+                      ? 'border-teal-500 bg-teal-500' 
+                      : 'border-gray-600'
+                  }`} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
       case 1:
         return (
           <div className="space-y-4">
@@ -297,7 +396,7 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-white">ClimbingPill Assessment</h2>
-              <p className="text-gray-400 text-sm">Step {currentStep} of 4</p>
+              <p className="text-gray-400 text-sm">Step {currentStep + 1} of 5</p>
             </div>
             <button
               onClick={onClose}
@@ -311,7 +410,7 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
           <div className="w-full bg-gray-700 rounded-full h-2 mb-6">
             <div
               className="bg-gradient-to-r from-pink-500 to-teal-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
+              style={{ width: `${((currentStep + 1) / 5) * 100}%` }}
             />
           </div>
 
@@ -323,8 +422,8 @@ const AssessmentModal: React.FC<AssessmentModalProps> = ({ isOpen, onClose, onCo
           {/* Navigation */}
           <div className="flex justify-between">
             <button
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              disabled={currentStep === 1}
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0}
               className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />

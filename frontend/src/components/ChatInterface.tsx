@@ -1320,13 +1320,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
   // Handle assessment completion
   const handleAssessmentComplete = async (assessmentResult: any) => {
     // ✅ FIXED: Use backend assessment result instead of frontend calculation
+    console.log('🔍 Assessment result received:', assessmentResult)
     const predictedGrade = assessmentResult?.predictedGrade || 'V4'
     const compositeScore = assessmentResult?.compositeScore || 0
+    
+    // Transform backend response to match database format for frontend display
+    const transformedData = {
+      id: Date.now().toString(), // Temporary ID
+      predicted_grade: assessmentResult?.predictedGrade,
+      composite_score: assessmentResult?.compositeScore,
+      current_boulder_grade: assessmentResult?.eightyPercentGrade || 'Not set',
+      fingerboard_max_weight_kg: assessmentResult?.addedWeight || 0,
+      pull_ups_max: assessmentResult?.maxPullUps || 0,
+      flexibility_score: assessmentResult?.flexibilityRatio || 0,
+      primary_weaknesses: assessmentResult?.weakestArea ? [assessmentResult.weakestArea.split(' (')[0]] : [],
+      recommended_focus_areas: assessmentResult?.recommendations?.slice(0, 3) || [],
+      created_at: new Date().toISOString()
+    }
     
     setMessages(prev => [...prev, {
       role: 'assistant',
       content: `Great! I've completed your assessment. Your predicted grade is **${predictedGrade}** with a composite score of **${compositeScore.toFixed(2)}**.\n\nNow I'll generate your personalized training program. This may take a moment...`,
-      richContent: { type: 'assessment', data: assessmentResult },
+      richContent: { type: 'assessment', data: [transformedData] }, // Wrap in array as AssessmentResults expects
       timestamp: new Date()
     }])
 

@@ -1,4 +1,5 @@
 import { MCPServer } from "@mastra/mcp";
+import type { MCPServerResources, Resource, MCPServerResourceContent } from "@mastra/mcp";
 import { climbingAgent } from "./agents/climbing-agent";
 import { climbingAssessmentTool } from "./tools/climbing-assessment-tool";
 import { 
@@ -15,6 +16,90 @@ import {
   createTimerTool, 
   getTimerPresetsTool 
 } from "./tools/timer-tool";
+
+// Resource handlers for MCP clients to access training data
+const climbingPillResources: MCPServerResources = {
+  listResources: async () => {
+    return [
+      {
+        uri: "climbingpill://methodology/assessment",
+        name: "ClimbingPill Assessment Methodology",
+        description: "Scientific climbing assessment methodology and scoring system",
+        mimeType: "text/markdown"
+      },
+      {
+        uri: "climbingpill://methodology/training",
+        name: "ClimbingPill Training Methodology", 
+        description: "Comprehensive training methodology and exercise library",
+        mimeType: "text/markdown"
+      },
+      {
+        uri: "climbingpill://data/grade-standards",
+        name: "Climbing Grade Standards",
+        description: "V-scale grade standards and progression benchmarks",
+        mimeType: "application/json"
+      }
+    ];
+  },
+  
+  getResourceContent: async ({ uri }) => {
+    switch (uri) {
+      case "climbingpill://methodology/assessment":
+        return {
+          text: `# ClimbingPill Assessment Methodology
+
+## Scientific Approach
+- Composite scoring using weighted metrics
+- Body weight normalization for accuracy
+- Grade prediction based on performance ratios
+
+## Key Metrics
+- Finger Strength: 45% weight (most important)
+- Pull-ups: 20% weight
+- Core Strength: 15% weight  
+- Push-ups: 10% weight
+- Flexibility: 10% weight
+
+## Assessment Types
+- Quick (2-3 min): Basic prediction
+- Partial (5-7 min): Good accuracy
+- Complete (10-15 min): Maximum accuracy`
+        };
+        
+      case "climbingpill://methodology/training":
+        return {
+          text: `# ClimbingPill Training Methodology
+
+## Core Principles
+- Progressive overload with 80% grade calculations
+- 6-week training cycles with deload phases
+- Environment-specific adaptations (home/gym/hybrid)
+- Injury prevention protocols
+
+## Exercise Categories
+- Fingerboard protocols (20mm edge, 10s hangs)
+- Boulder project progression
+- Flash training sequences
+- Technical skill development
+- Endurance protocols`
+        };
+        
+      case "climbingpill://data/grade-standards":
+        return {
+          text: JSON.stringify({
+            "V4": { "composite_score": 0.15, "finger_strength_ratio": 1.3, "pull_up_ratio": 0.5 },
+            "V5": { "composite_score": 0.25, "finger_strength_ratio": 1.4, "pull_up_ratio": 0.6 },
+            "V6": { "composite_score": 0.35, "finger_strength_ratio": 1.5, "pull_up_ratio": 0.7 },
+            "V7": { "composite_score": 0.45, "finger_strength_ratio": 1.6, "pull_up_ratio": 0.8 },
+            "V8": { "composite_score": 0.55, "finger_strength_ratio": 1.7, "pull_up_ratio": 0.9 }
+          }, null, 2)
+        };
+        
+      default:
+        throw new Error(`Resource not found: ${uri}`);
+    }
+  }
+};
 
 // Create MCP Server to expose ClimbingPill capabilities
 // NOTE: This is for external MCP clients (like Cursor, Claude Desktop), not for Mastra Cloud deployment
@@ -42,6 +127,9 @@ export const climbingPillMCPServer = new MCPServer({
   agents: {
     climbingPillAgent: climbingAgent
   },
+
+  // Expose climbing methodology and data as resources
+  resources: climbingPillResources,
 
   // Optional: Add repository info for discoverability
   repository: {

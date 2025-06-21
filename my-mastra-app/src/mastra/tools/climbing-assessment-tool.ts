@@ -66,6 +66,14 @@ export const climbingAssessmentTool = createTool({
     bodyWeight: z.number(),
     height: z.number(),
     
+    // Original input values (for frontend display)
+    addedWeight: z.number(),
+    maxPullUps: z.number(),
+    maxPushUps: z.number(),
+    maxToeToBar: z.number(),
+    legSpreadDistance: z.number(),
+    eightyPercentGrade: z.string(),
+    
     // Performance ratios
     fingerStrengthRatio: z.number(),
     pullUpRatio: z.number(),
@@ -106,7 +114,30 @@ export const climbingAssessmentTool = createTool({
       climberName,
     } = context;
 
-    // STEP 1: Calculate Performance Ratios
+    // ASSESSMENT TYPE LOGIC - Different requirements and accuracy for each type
+    let requiredMetrics: string[] = [];
+    let confidenceMultiplier = 1.0;
+    let assessmentDescription = '';
+
+    switch (assessmentType) {
+      case 'quick':
+        requiredMetrics = ['finger strength', 'basic strength', 'current grade'];
+        confidenceMultiplier = 0.7; // Reduced confidence for quick assessment
+        assessmentDescription = 'Quick Assessment (2-3 minutes) - Basic grade prediction';
+        break;
+      case 'partial':
+        requiredMetrics = ['finger strength', 'pull-ups', 'core OR push-ups', 'current grade'];
+        confidenceMultiplier = 0.85; // Good confidence for partial assessment
+        assessmentDescription = 'Partial Assessment (5-7 minutes) - Good accuracy with key metrics';
+        break;
+      case 'complete':
+        requiredMetrics = ['all metrics'];
+        confidenceMultiplier = 1.0; // Full confidence for complete assessment
+        assessmentDescription = 'Complete Assessment (10-15 minutes) - Maximum accuracy';
+        break;
+    }
+
+    // STEP 1: Calculate Performance Ratios (with assessment type considerations)
     
     // Finger strength ratio: (added_weight + body_weight) / body_weight
     const fingerStrengthRatio = (addedWeight + bodyWeight) / bodyWeight;
@@ -114,16 +145,19 @@ export const climbingAssessmentTool = createTool({
     // Pull-ups ratio: max_reps / body_weight
     const pullUpRatio = maxPullUps / bodyWeight;
     
-    // Push-ups ratio: max_reps / body_weight  
-    const pushUpRatio = maxPushUps / bodyWeight;
+    // Push-ups ratio: max_reps / body_weight (required for complete, optional for partial)
+    const pushUpRatio = (assessmentType === 'quick' && maxPushUps === 0) ? 
+      pullUpRatio * 0.8 : maxPushUps / bodyWeight; // Estimate for quick assessment
     
-    // Toe-to-bar ratio: max_reps / body_weight
-    const toeToBarRatio = maxToeToBar / bodyWeight;
+    // Toe-to-bar ratio: max_reps / body_weight (required for complete, optional for partial) 
+    const toeToBarRatio = (assessmentType === 'quick' && maxToeToBar === 0) ?
+      pullUpRatio * 0.6 : maxToeToBar / bodyWeight; // Estimate for quick assessment
     
-    // Flexibility ratio: leg_spread_distance / height
-    const flexibilityRatio = legSpreadDistance / height;
+    // Flexibility ratio: leg_spread_distance / height (optional for quick/partial)
+    const flexibilityRatio = (assessmentType === 'quick' && legSpreadDistance === 0) ?
+      0.9 : legSpreadDistance / height; // Default reasonable flexibility for quick
 
-    // STEP 2: Normalize to 0-100 scale
+    // STEP 2: Normalize to 0-100 scale (same for all assessment types)
     
     // Finger strength normalization (range 1.0-2.5)
     const normalizedFingerStrength = Math.min(100, Math.max(0, 
@@ -150,19 +184,62 @@ export const climbingAssessmentTool = createTool({
       ((flexibilityRatio - 0.8) / (1.5 - 0.8)) * 100
     ));
 
-    // STEP 3: Calculate Composite Score
-    const compositeScore = 
-      (0.45 * (normalizedFingerStrength / 100)) +
-      (0.20 * (normalizedPullUps / 100)) +
-      (0.10 * (normalizedPushUps / 100)) +
-      (0.15 * (normalizedCoreStrength / 100)) +
-      (0.10 * (normalizedFlexibility / 100));
+    // STEP 3: Calculate Composite Score (adjusted weights based on assessment type)
+    let compositeScore: number;
+    
+    switch (assessmentType) {
+      case 'quick':
+        // Focus heavily on finger strength and basic strength for quick assessment
+        compositeScore = 
+          (0.60 * (normalizedFingerStrength / 100)) +  // Increased weight
+          (0.30 * (normalizedPullUps / 100)) +         // Increased weight
+          (0.05 * (normalizedPushUps / 100)) +         // Estimated values get less weight
+          (0.03 * (normalizedCoreStrength / 100)) +    // Estimated values get less weight
+          (0.02 * (normalizedFlexibility / 100));      // Estimated values get less weight
+        break;
+      case 'partial':
+        // Balanced approach with measured metrics getting higher weight
+        compositeScore = 
+          (0.50 * (normalizedFingerStrength / 100)) +  // Slightly increased
+          (0.25 * (normalizedPullUps / 100)) +         // Increased weight
+          (0.10 * (normalizedPushUps / 100)) +         // Standard or estimated
+          (0.10 * (normalizedCoreStrength / 100)) +    // Standard or estimated
+          (0.05 * (normalizedFlexibility / 100));      // Reduced weight
+        break;
+      case 'complete':
+      default:
+        // Standard ClimbingPill methodology weights
+        compositeScore = 
+          (0.45 * (normalizedFingerStrength / 100)) +
+          (0.20 * (normalizedPullUps / 100)) +
+          (0.10 * (normalizedPushUps / 100)) +
+          (0.15 * (normalizedCoreStrength / 100)) +
+          (0.10 * (normalizedFlexibility / 100));
+        break;
+    }
+
+    // Apply confidence multiplier to composite score for grade prediction accuracy
+    const adjustedCompositeScore = compositeScore * confidenceMultiplier;
 
     // STEP 4: Determine Grade from Composite Score
-    const predictedGrade = getGradeFromCompositeScore(compositeScore);
+    const predictedGrade = getGradeFromCompositeScore(adjustedCompositeScore);
     
-    // STEP 5: Calculate Confidence Level
-    const confidenceLevel = calculateConfidenceLevel(compositeScore, eightyPercentGrade);
+    // STEP 5: Calculate Confidence Level (based on assessment type and data completeness)
+    const baseConfidence = calculateConfidenceLevel(adjustedCompositeScore, eightyPercentGrade);
+    let finalConfidence: string;
+    
+    switch (assessmentType) {
+      case 'quick':
+        finalConfidence = baseConfidence === 'High' ? 'Medium' : 'Low';
+        break;
+      case 'partial':
+        finalConfidence = baseConfidence === 'High' ? 'High' : 'Medium';
+        break;
+      case 'complete':
+      default:
+        finalConfidence = baseConfidence;
+        break;
+    }
     
     // STEP 6: Identify Strongest and Weakest Areas
     const metrics = [
@@ -177,18 +254,20 @@ export const climbingAssessmentTool = createTool({
     const strongestArea = `${sortedMetrics[0].name} (${sortedMetrics[0].ratio.toFixed(2)} - ${getInterpretation(sortedMetrics[0].name, sortedMetrics[0].score)})`;
     const weakestArea = `${sortedMetrics[4].name} (${sortedMetrics[4].ratio.toFixed(2)} - ${getInterpretation(sortedMetrics[4].name, sortedMetrics[4].score)})`;
     
-    // STEP 7: Generate Training Recommendations
-    const recommendations = generateTrainingRecommendations(sortedMetrics, compositeScore);
+    // STEP 7: Generate Training Recommendations (tailored to assessment type)
+    const recommendations = generateTrainingRecommendations(sortedMetrics, compositeScore, assessmentType);
 
-    // STEP 8: Create Assessment Summary
+    // STEP 8: Create Assessment Summary (include assessment type info)
     const assessmentSummary = createAssessmentSummary(
       climberName,
       predictedGrade,
-      confidenceLevel,
+      finalConfidence,
       strongestArea,
       weakestArea,
       compositeScore,
-      metrics
+      metrics,
+      assessmentType,
+      assessmentDescription
     );
 
     // STEP 9: Save Assessment to Supabase
@@ -209,7 +288,7 @@ export const climbingAssessmentTool = createTool({
         technique_score: (normalizedCoreStrength + normalizedFlexibility) / 2, // Combined technique
         endurance_score: (normalizedPullUps + normalizedPushUps) / 2, // Combined endurance
         predicted_grade: predictedGrade,
-        confidence_level: confidenceLevel.toLowerCase() as 'low' | 'medium' | 'high',
+        confidence_level: finalConfidence.toLowerCase() as 'low' | 'medium' | 'high',
         primary_weaknesses: [sortedMetrics[4].name, sortedMetrics[3].name], // Two weakest areas
         recommended_focus_areas: recommendations.slice(0, 3), // First 3 recommendations
         notes: `${strongestArea} | ${weakestArea} | Composite: ${compositeScore.toFixed(3)}`
@@ -224,7 +303,7 @@ export const climbingAssessmentTool = createTool({
 
       const savedAssessment = await dbHelpers.createAssessment(assessmentData);
       if (savedAssessment) {
-        console.log(`✅ Assessment saved successfully for user ${userId}: ${predictedGrade} (${confidenceLevel} confidence)`);
+        console.log(`✅ Assessment saved successfully for user ${userId}: ${predictedGrade} (${finalConfidence} confidence)`);
         console.log(`📝 Saved assessment ID: ${savedAssessment.id}`);
       } else {
         console.error(`❌ Failed to save assessment for user ${userId} - no data returned`);
@@ -261,6 +340,14 @@ export const climbingAssessmentTool = createTool({
       bodyWeight,
       height,
       
+      // Original input values (for frontend display)
+      addedWeight,
+      maxPullUps,
+      maxPushUps,
+      maxToeToBar,
+      legSpreadDistance,
+      eightyPercentGrade,
+      
       // Performance ratios
       fingerStrengthRatio: Math.round(fingerStrengthRatio * 100) / 100,
       pullUpRatio: Math.round(pullUpRatio * 100) / 100,
@@ -278,7 +365,7 @@ export const climbingAssessmentTool = createTool({
       // Final assessment
       compositeScore: Math.round(compositeScore * 1000) / 1000,
       predictedGrade,
-      confidenceLevel,
+      confidenceLevel: finalConfidence,
       strongestArea,
       weakestArea,
       recommendations,
@@ -324,15 +411,33 @@ function getInterpretation(metricName: string, score: number): string {
 
 function generateTrainingRecommendations(
   sortedMetrics: Array<{ name: string; score: number; ratio: number }>,
-  compositeScore: number
+  compositeScore: number,
+  assessmentType: string
 ): string[] {
   const recommendations: string[] = [];
   const weakest = sortedMetrics[4];
   const secondWeakest = sortedMetrics[3];
   const strongest = sortedMetrics[0];
   
+  // Add assessment type context
+  switch (assessmentType) {
+    case 'quick':
+      recommendations.push('QUICK ASSESSMENT RECOMMENDATIONS:');
+      recommendations.push('• Consider taking a complete assessment for detailed analysis');
+      recommendations.push('• Focus on the primary area identified below');
+      break;
+    case 'partial':
+      recommendations.push('PARTIAL ASSESSMENT RECOMMENDATIONS:');
+      recommendations.push('• For comprehensive analysis, complete all metrics');
+      recommendations.push('• Current recommendations based on measured data');
+      break;
+    case 'complete':
+      recommendations.push('COMPLETE ASSESSMENT RECOMMENDATIONS:');
+      break;
+  }
+  
   // Primary Focus (Weakest Area)
-  recommendations.push(`PRIMARY FOCUS - ${weakest.name}:`);
+  recommendations.push(`\nPRIMARY FOCUS - ${weakest.name}:`);
   
   switch (weakest.name) {
     case 'Finger Strength':
@@ -396,10 +501,12 @@ function createAssessmentSummary(
   strongestArea: string,
   weakestArea: string,
   compositeScore: number,
-  metrics: Array<{ name: string; score: number; ratio: number }>
+  metrics: Array<{ name: string; score: number; ratio: number }>,
+  assessmentType: string,
+  assessmentDescription: string
 ): string {
   return `
-Based on ${climberName}'s Assessment:
+Based on ${climberName}'s ${assessmentDescription}:
 
 GRADE PREDICTION:
 Predicted Grade: ${predictedGrade}
