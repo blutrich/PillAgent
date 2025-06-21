@@ -11,12 +11,19 @@ import { climbingAgent } from './agents/climbing-agent';
 // Import workflows
 import { simpleRetentionWorkflow } from './workflows/simple-retention-workflow';
 
+// Import MCP server
+import { climbingPillMCPServer } from './mcp-server';
+
 export const mastra = new Mastra({
   agents: { 
     climbingPillAgent: climbingAgent
   },
   workflows: {
     simpleRetentionWorkflow
+  },
+  // Register MCP server for Mastra Cloud visibility
+  mcpServers: {
+    climbingPillMCPServer
   },
   storage: new LibSQLStore({
     url: 'file:./mastra-climbing.db' // Persistent file storage
