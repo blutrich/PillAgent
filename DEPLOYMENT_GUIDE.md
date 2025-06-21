@@ -49,6 +49,7 @@ vercel --prod
 # - NEXT_PUBLIC_SUPABASE_URL
 # - NEXT_PUBLIC_SUPABASE_ANON_KEY
 # - NEXT_PUBLIC_MASTRA_API_URL=https://pill_agent.mastra.cloud
+# - TAVILY_API_KEY=your_tavily_api_key
 ```
 
 ### **Option 2: Netlify**
@@ -82,8 +83,11 @@ npm run build
 NEXT_PUBLIC_SUPABASE_URL=https://lxeggioigpyzmkrjdmne.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-# Mastra API Configuration  
+# Mastra API Configuration (without /api suffix - added automatically)
 NEXT_PUBLIC_MASTRA_API_URL=https://pill_agent.mastra.cloud
+
+# Tavily Search API (for real-time web search)
+TAVILY_API_KEY=your_tavily_api_key_here
 
 # Optional: Analytics/Monitoring
 NEXT_PUBLIC_ANALYTICS_ID=your_analytics_id
@@ -95,6 +99,35 @@ Your Mastra backend is already deployed and configured at:
 - **Status**: ✅ Production Ready
 - **Database**: ✅ Connected to Supabase
 - **Memory**: ✅ Mastra Cloud managed
+
+### **🔑 API Keys Setup for Production**
+
+#### **Tavily Search API Key**
+The Tavily search tool requires an API key for real-time web search functionality:
+
+1. **Get API Key**:
+   - Visit [tavily.com](https://tavily.com/)
+   - Sign up for an account
+   - Navigate to Dashboard → API Keys
+   - Copy your API key
+
+2. **Add to Mastra Cloud** (Backend):
+   - Go to [Mastra Cloud Dashboard](https://cloud.mastra.ai/)
+   - Navigate to your `pill_agent` project
+   - Go to Settings → Environment Variables
+   - Add: `TAVILY_API_KEY=your_api_key_here`
+
+3. **Vercel Deployment** (if using Vercel for frontend):
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Select your ClimbingPill project
+   - Go to Settings → Environment Variables
+   - Add: `TAVILY_API_KEY=your_api_key_here`
+   - Redeploy your application
+
+4. **Other Platforms**:
+   - **Netlify**: Site Settings → Environment Variables
+   - **Railway**: Project Settings → Variables
+   - **Render**: Environment → Add Environment Variable
 
 ## 📊 **PRODUCTION READINESS CHECKLIST**
 

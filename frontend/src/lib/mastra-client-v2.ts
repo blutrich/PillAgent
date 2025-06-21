@@ -2,7 +2,7 @@
 // NEW FILE: v2 to bypass browser cache completely
 // CRITICAL FIX: Assessment error resolved with missing API methods
 // Cache bust: 2025-01-15T22:20:00Z - Complete new file to force refresh
-const MASTRA_API_BASE = process.env.NEXT_PUBLIC_MASTRA_API_URL || 'https://pill_agent.mastra.cloud/api';
+const MASTRA_API_BASE = (process.env.NEXT_PUBLIC_MASTRA_API_URL || 'https://pill_agent.mastra.cloud') + '/api';
 
 // Import Supabase client for direct database access
 import { supabase } from './supabase';

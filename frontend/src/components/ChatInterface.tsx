@@ -105,8 +105,8 @@ const ProgramChart = ({ programData, onOpenArtifact }: { programData: any, onOpe
     <div className="bg-gray-800 rounded-lg p-4 my-4 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-lime-400" />
-          <h3 className="text-white font-medium">Training Program Overview</h3>
+        <BarChart3 className="w-5 h-5 text-lime-400" />
+        <h3 className="text-white font-medium">Training Program Overview</h3>
         </div>
         {onOpenArtifact && (
           <button
@@ -1466,21 +1466,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
 
   return (
     <>
-      <div className="flex flex-col h-screen bg-black w-full max-w-full overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800 w-full max-w-full">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <img src="/climbingpill-logo.svg" alt="ClimbingPill" className="h-8 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <h1 className="text-white font-semibold text-sm sm:text-base truncate">ClimbingPill AI Coach</h1>
-              <p className="text-gray-400 text-xs sm:text-sm truncate">Your personal climbing training assistant</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-            <span className="text-xs sm:text-sm text-gray-400">Online</span>
+    <div className="flex flex-col h-screen bg-black w-full max-w-full overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-800 w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <img src="/climbingpill-logo.svg" alt="ClimbingPill" className="h-8 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-white font-semibold text-sm sm:text-base truncate">ClimbingPill AI Coach</h1>
+            <p className="text-gray-400 text-xs sm:text-sm truncate">Your personal climbing training assistant</p>
           </div>
         </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+          <span className="text-xs sm:text-sm text-gray-400">Online</span>
+        </div>
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 w-full max-w-full">
@@ -1570,13 +1570,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialMessages = [] }) =
         </div>
       </div>
 
-        {/* Assessment Modal */}
-        <AssessmentModal
-          isOpen={showAssessmentModal}
-          onClose={() => setShowAssessmentModal(false)}
-          onComplete={handleAssessmentComplete}
-        />
-      </div>
+      {/* Assessment Modal */}
+      <AssessmentModal
+        isOpen={showAssessmentModal}
+        onClose={() => setShowAssessmentModal(false)}
+        onComplete={handleAssessmentComplete}
+      />
+    </div>
 
       {/* Artifact Panel */}
       <ArtifactPanel

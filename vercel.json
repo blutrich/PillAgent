@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_MASTRA_API_URL": "https://pill_agent.mastra.cloud/api"
+    "NEXT_PUBLIC_MASTRA_API_URL": "https://pill_agent.mastra.cloud"
   }
 } 
